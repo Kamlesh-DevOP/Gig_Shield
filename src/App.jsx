@@ -201,7 +201,7 @@ function rainLevel(cm) {
 
 
 // ─── SMALL HELPERS ────────────────────────────────────────────────────────────
-const Header = ({ partner }) => (
+const Header = ({ partner, onLogout }) => (
   <header className="hdr">
     <div className="hdr-left" style={{display:"flex",alignItems:"center",gap:10}}>
       <div className="hdr-logomark"><Shield size={15} /></div>
@@ -213,6 +213,9 @@ const Header = ({ partner }) => (
         <span className="hdr-zone-label">{partner.zone}</span>
       </div>
       <div className="hdr-avatar">{partner.avatar}</div>
+      <button onClick={onLogout} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(126,61,181,0.15)",border:"1px solid #7E3DB5",color:"#3B0764",borderRadius:8,padding:"5px 12px",fontSize:12,fontWeight:600,cursor:"pointer",letterSpacing:0.2}}>
+        <LogIn size={13} style={{transform:"rotate(180deg)"}} /> Logout
+      </button>
     </div>
   </header>
 );
@@ -330,14 +333,14 @@ function EarningsChart({ partner, pricing }) {
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({ partnerId, onSelectPlan, onViewClaim, onPayPremium }) {
+function Dashboard({ partnerId, onSelectPlan, onViewClaim, onPayPremium, onLogout }) {
   const partner = PARTNERS[partnerId];
   const pricing = useMemo(() => computePricing(partner), [partner]);
   const tier    = pricing.tier;
 
   return (
     <div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",flexDirection:"column"}}>
-      <Header partner={partner} />
+      <Header partner={partner} onLogout={onLogout} />
       <div className="dash-body">
 
         {/* Welcome */}
@@ -925,6 +928,7 @@ export default function App() {
           onSelectPlan={() => setScreen("plans")}
           onViewClaim={() => setScreen("claim")}
           onPayPremium={() => setScreen("plans")}
+          onLogout={() => { setPartnerId(null); setScreen("login"); }}
         />
       )}
       {screen === "plans" && partnerId && (
