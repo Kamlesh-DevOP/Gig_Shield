@@ -124,6 +124,14 @@ def log_rag_query_any(trace_id: str, query_type: str, snippet: str) -> None:
     sqlite_log(trace_id, query_type, snippet)
 
 
+def _dedupe_worker_batch(chunk: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Postgres upsert fails with 21000 if the same primary key appears twice in one request."""
+    merged: Dict[int, Dict[str, Any]] = {}
+    for row in chunk:
+        merged[int(row["worker_id"])] = row
+    return list(merged.values())
+
+
 def bulk_upsert_workers(rows: List[Dict[str, Any]], batch_size: int = 250) -> int:
     """
     Upsert worker snapshots into gigshield_workers. Each row: {"worker_id": int, "record": dict}.
@@ -135,6 +143,7 @@ def bulk_upsert_workers(rows: List[Dict[str, Any]], batch_size: int = 250) -> in
     total = 0
     for i in range(0, len(rows), batch_size):
         chunk = rows[i : i + batch_size]
+        chunk = _dedupe_worker_batch(chunk)
         try:
             sb.table(TABLE_WORKERS).upsert(chunk, on_conflict="worker_id").execute()
         except Exception as e:
@@ -145,6 +154,12 @@ def bulk_upsert_workers(rows: List[Dict[str, Any]], batch_size: int = 250) -> in
                     f"Table public.{TABLE_WORKERS} is missing. In Supabase → SQL Editor, run the file "
                     f"supabase/migrations/002_gigshield_workers.sql (and 001 if you have not). "
                     f"Then retry. Original error: {e}"
+                ) from e
+            if "21000" in msg or "second time" in msg.lower():
+                raise RuntimeError(
+                    "Upsert batch contained duplicate worker_id values. This should be handled by "
+                    "_dedupe_worker_batch; if you see this, report a bug. Original error: "
+                    f"{e}"
                 ) from e
             raise
         total += len(chunk)

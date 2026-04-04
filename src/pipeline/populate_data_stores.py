@@ -51,8 +51,11 @@ def run_populate(
     df = ensure_worker_columns(pd.read_csv(csv_path))
     if limit is not None and limit > 0:
         df = df.head(limit)
+    before_dedupe = len(df)
+    if "worker_id" in df.columns:
+        df = df.drop_duplicates(subset=["worker_id"], keep="last")
     n = len(df)
-    print(f"Loaded {n} rows from {csv_path}")
+    print(f"Loaded {before_dedupe} rows from {csv_path}" + (f" ({before_dedupe - n} duplicate worker_id rows dropped, {n} unique)" if before_dedupe != n else ""))
 
     if do_supabase:
         from src.persistence.supabase_client import bulk_upsert_workers, is_configured

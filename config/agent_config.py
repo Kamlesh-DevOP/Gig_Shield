@@ -24,7 +24,7 @@ LANGCHAIN_CONFIG = {
 
 # Vector Store Configuration
 VECTOR_STORE_CONFIG = {
-    'provider': 'chromadb',  # 'chromadb' or 'pinecone'
+    'provider': 'pinecone',  # 'chromadb' or 'pinecone'
     'collection_name': 'gigshield_knowledge',
     'embedding_model': 'sentence-transformers/all-MiniLM-L6-v2',
     'chunk_size': 500,
@@ -35,13 +35,14 @@ VECTOR_STORE_CONFIG = {
         'max_l2_distance': 1.25,
         'include_metadata': True,
     },
-    'chromadb': {
-        'persist_directory': './vector_store/chromadb'
-    },
     'pinecone': {
-        # Env: PINECONE_API_KEY (required), PINECONE_HOST (serverless URL from console), optional PINECONE_INDEX_NAME
-        'index_name': 'gigshield-index',
-        'dimension': 384,  # must match index + all-MiniLM-L6-v2 (384)
+        # Env: PINECONE_API_KEY, PINECONE_HOST (serverless)
+        # PINECONE_INDEX_NAME: must match the index name in the Pinecone console so describe_index can read dimension
+        #   (defaults to gigshield-index if unset — wrong name => fallback to MiniLM 384 and dimension errors).
+        # Or set PINECONE_INDEX_DIMENSION=1024 / GIGSHIELD_EMBEDDING_MODEL=intfloat/e5-large-v2 explicitly.
+        'index_name': 'devtrails',
+        'dimension': 384,
+        'pinecone_index_dimension': 1024
     }
 }
 
