@@ -1,0 +1,44 @@
+# render.yaml — Render Blueprint (Infrastructure as Code)
+# Docs: https://docs.render.com/blueprint-spec
+
+services:
+  - type: web
+    name: gigshield-api
+    runtime: docker
+    repo: https://github.com/YOUR_GITHUB_USERNAME/GIG_INSURANCE_COMPANY  # ← Update this
+    plan: free                    # or starter / standard for production
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      # --- Required ---
+      - key: GROQ_API_KEY
+        sync: false               # you will set this manually in dashboard
+
+      # --- Optional (Pinecone RAG) ---
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PINECONE_HOST
+        sync: false
+      - key: PINECONE_INDEX_NAME
+        value: devtrails
+
+      # --- Optional (Supabase persistence) ---
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+      # --- App tuning ---
+      - key: GIGSHIELD_MODEL_DIR
+        value: models
+      - key: GIGSHIELD_CORS_ORIGINS
+        value: "*"
+      - key: GIGSHIELD_MOUNT_PARTNER_MOCK
+        value: "true"
+      - key: VECTOR_STORE_PROVIDER
+        value: chromadb
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: PORT
+        value: "10000"

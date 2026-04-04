@@ -1,0 +1,1 @@
+# GigShield config package

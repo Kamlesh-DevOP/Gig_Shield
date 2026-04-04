@@ -1,0 +1,63 @@
+# requirements-render.txt
+# Slimmed-down deps for Render deployment (API serving only).
+# Heavy training-only / visualization packages removed to fit free-tier RAM & disk.
+
+# Build helpers
+setuptools>=69.0.0
+wheel>=0.43.0
+
+# Core ML (inference only — models are pre-trained and checked in)
+numpy>=2.1.0,<3.0.0
+pandas>=2.2.0,<3.0.0
+scikit-learn>=1.5.0,<2.0.0
+xgboost>=2.1.0
+lightgbm>=4.5.0
+
+# TensorFlow CPU-only for LSTM income forecasting (loads .h5 model)
+tensorflow-cpu>=2.18.0,<2.21.0
+
+# Time Series (SARIMAX used at inference)
+statsmodels>=0.14.2
+pmdarima>=2.0.4
+
+# Feature Engineering
+category_encoders>=2.6.0
+feature-engine>=1.6.2
+
+# Model Interpretability (shap imported at module level in risk_scoring & fraud_detection)
+shap>=0.45.0
+
+# Vector Database & Embeddings
+chromadb>=0.5.0
+pinecone>=5.0.0,<8.0.0
+sentence-transformers>=2.2.2
+groq
+
+# LangChain & Agents
+langchain>=1.0.0,<2.0.0
+langchain-core>=0.3.0,<2.0.0
+langchain-community>=0.3.0,<2.0.0
+langchain-groq>=0.2.0
+langgraph>=0.2.45,<2.0.0
+
+# API & Data Fetching
+requests>=2.31.0
+aiohttp>=3.9.1
+python-dotenv>=1.0.0
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+
+# Database
+sqlalchemy>=2.0.23
+supabase>=2.4.0,<3.0.0
+
+# Utilities
+pyyaml>=6.0.1
+joblib>=1.3.2
+tqdm>=4.66.1
+python-dateutil>=2.8.2
+pytz>=2023.3
+
+# Geospatial
+geopy>=2.4.1
+haversine>=2.8.0

@@ -1,0 +1,40 @@
+# .dockerignore — keep the Docker build context lean
+.git
+.gitignore
+.github
+.vscode
+.idea
+.mypy_cache
+.pytest_cache
+__pycache__
+*.pyc
+*.pyo
+
+# Frontend (not needed for backend image)
+frontend/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Logs & temp
+logs/*.jsonl
+*.log
+
+# IDE / OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Docs / meta
+README.md
+QUICKSTART.md
+LICENSE
+*.md
+
+# Tests
+tests/
+pytest.ini
+.coveragerc

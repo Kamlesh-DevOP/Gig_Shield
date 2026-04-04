@@ -35,6 +35,9 @@ VECTOR_STORE_CONFIG = {
         'max_l2_distance': 1.25,
         'include_metadata': True,
     },
+    'chromadb': {
+        'persist_directory': 'vector_store/chromadb',
+    },
     'pinecone': {
         # Env: PINECONE_API_KEY, PINECONE_HOST (serverless)
         # PINECONE_INDEX_NAME: must match the index name in the Pinecone console so describe_index can read dimension
