@@ -20,7 +20,7 @@
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Atharsh2910/GIC_ML-Pipeline.git
+git clone https://github.com/Status-Code-401/GIG_INSURANCE_COMPANY.git
 cd GIC_ML-Pipeline
 ```
 
