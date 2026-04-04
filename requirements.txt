@@ -15,9 +15,7 @@ scikit-learn>=1.5.0,<2.0.0
 xgboost>=2.1.0
 lightgbm>=4.5.0
 
-# Deep Learning (versions with Py3.13 + NumPy 2 support)
 tensorflow>=2.18.0,<2.21.0
-# Keras 3 ships with TF 2.16+; separate keras pin not needed for most workflows
 torch>=2.5.0
 
 # Time Series
@@ -35,7 +33,6 @@ lime>=0.2.0.1
 
 # Vector Database & Embeddings (use `pinecone`, not deprecated `pinecone-client`)
 pinecone>=5.0.0,<8.0.0
-chromadb>=0.4.22
 sentence-transformers>=2.2.2
 openai>=1.6.1
 
