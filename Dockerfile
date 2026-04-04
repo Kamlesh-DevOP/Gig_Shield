@@ -37,9 +37,12 @@ RUN mkdir -p data/raw data/processed data/features data/outputs \
              models/behavior_analysis models/premium_prediction \
              logs vector_store/chromadb
 
-# ── 4. Render uses PORT env var (default 10000) ─────────────────────
+# ── 4. Pre-download SentenceTransformer model (avoid runtime timeout) ──
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
+
+# ── 5. Render uses PORT env var (default 10000) ─────────────────────
 ENV PORT=10000
 EXPOSE ${PORT}
 
-# ── 5. Start uvicorn ────────────────────────────────────────────────
+# ── 6. Start uvicorn ────────────────────────────────────────────────
 CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT} --workers 1 --timeout-keep-alive 120"]

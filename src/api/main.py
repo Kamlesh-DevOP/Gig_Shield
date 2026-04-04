@@ -112,16 +112,14 @@ def _workflow_to_dict(r: Any) -> Dict[str, Any]:
     }
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
+def load_models_sync():
     global inference_pipeline, vector_store, classic_orchestrator, langgraph_orchestrator
 
     model_dir = os.getenv("GIGSHIELD_MODEL_DIR", "models")
     paths = _model_paths(model_dir)
 
-    print("\n[GigShield API] Starting — loading models and orchestrators...")
+    print("\n[GigShield API] Background task starting — loading models and orchestrators...")
 
-    inference_pipeline = None
     try:
         from src.pipeline.training_pipeline import InferencePipeline
 
@@ -131,7 +129,6 @@ async def lifespan(app: FastAPI):
         logger.warning("InferencePipeline not loaded: %s", e)
         print(f"[GigShield API] Warning: InferencePipeline unavailable: {e}")
 
-    vector_store = None
     try:
         from src.rag.rag_system import VectorStore, populate_knowledge_base
 
@@ -142,7 +139,6 @@ async def lifespan(app: FastAPI):
         logger.warning("Vector store / KB: %s", e)
         print(f"[GigShield API] Warning: RAG vector store limited or offline: {e}")
 
-    classic_orchestrator = None
     try:
         from src.pipeline.orchestrator import GigShieldOrchestrator
 
@@ -155,11 +151,9 @@ async def lifespan(app: FastAPI):
         logger.warning("Classic orchestrator: %s", e)
         print(f"[GigShield API] Warning: classic orchestrator failed: {e}")
 
-    langgraph_orchestrator = None
     try:
         from src.agents.gigshield_langgraph import GigShieldLangGraphOrchestrator
 
-        # If shared vector_store failed, let LangGraph create one and populate KB once.
         lang_ensure_kb = vector_store is None
         langgraph_orchestrator = GigShieldLangGraphOrchestrator(
             inference_pipeline=inference_pipeline,
@@ -171,6 +165,16 @@ async def lifespan(app: FastAPI):
         logger.warning("LangGraph orchestrator: %s", e)
         print(f"[GigShield API] Warning: LangGraph offline (check GROQ_API_KEY): {e}")
 
+    print("[GigShield API] Background loading complete.")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    import asyncio
+    
+    print("\n[GigShield API] Starting FastAPI server. Models are loading in the background...")
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(None, load_models_sync)
     yield
 
     print("[GigShield API] Shutdown.")
