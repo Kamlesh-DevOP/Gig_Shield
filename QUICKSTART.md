@@ -1,10 +1,10 @@
-# 🚀 GigShield — Quick Start Guide
+# GigShield — Quick Start Guide
 
 > **GigShield** is an AI-powered parametric insurance platform for gig workers. It uses ML models to automatically detect weather disruptions (rainfall, cyclones) and trigger payouts — no paperwork required.
 
 ---
 
-## 📋 Prerequisites
+##  Prerequisites
 
 | Tool | Version | Check |
 |------|---------|-------|
@@ -20,7 +20,7 @@
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Atharsh2910/GIC_ML-Pipeline.git
+git clone https://github.com/Status-Code-401/GIG_INSURANCE_COMPANY.git
 cd GIC_ML-Pipeline
 ```
 
