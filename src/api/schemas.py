@@ -12,7 +12,7 @@ class WorkerRecord(BaseModel):
     city: str = "Mumbai"
     avg_52week_income: float = 7500.0
     disruption_type: Optional[str] = "Heavy_Rain"
-    selected_slab: Optional[str] = "Slab_50"
+    selected_slab: Optional[str] = "Slab_100"
     income_loss_percentage: Optional[float] = 35.0
     employment_type: Optional[str] = "Full-Time"
     platform: Optional[str] = "Zepto"
@@ -20,13 +20,13 @@ class WorkerRecord(BaseModel):
     cooling_period_completed: Optional[int] = 1
     weeks_active: Optional[int] = 26
     week_of_year: Optional[int] = 20
-    weekly_income: Optional[float] = 5000.0
+    weekly_income: Optional[float] = 3500.0
     income_std_dev: Optional[float] = 200.0
     income_volatility: Optional[float] = 0.1
     orders_completed_week: Optional[int] = 50
     active_hours_week: Optional[float] = 40.0
     disruption_duration_hours: Optional[float] = 2.0
-    rainfall_cm: Optional[float] = 5.0
+    rainfall_cm: Optional[float] = 15.0
     temperature_extreme: Optional[float] = 28.0
     cyclone_alert_level: Optional[int] = 0
     payment_consistency_score: Optional[float] = 0.9

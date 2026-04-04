@@ -5,9 +5,11 @@ import {
   MapPin, Activity, Lock, CreditCard, Smartphone, Building2,
   Wallet, ArrowLeft, Star, Package, BarChart2, CircleDollarSign,
   ShieldCheck, Radio, TriangleAlert, BadgeCheck, FileText, User,
-  CalendarDays, Banknote, AlertCircle, TrendingUp, Target, Percent
+  CalendarDays, Banknote, AlertCircle, TrendingUp, Target, Percent,
+  Satellite
 } from "lucide-react";
 import OnboardingPage from "./OnboardingPage";
+import SimulationPage from "./SimulationPage";
 import { supabase } from "./supabaseClient";
 import './index.css';
 
@@ -463,7 +465,7 @@ function EarningsChart({ partner, pricing }) {
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({ partnerId, evaluation, evalLoading, onSelectPlan, onViewClaim, onPayPremium, onLogout }) {
+function Dashboard({ partnerId, evaluation, evalLoading, onSelectPlan, onViewClaim, onPayPremium, onLogout, onSimulate }) {
   const partner = PARTNERS[partnerId];
   const pricing = useMemo(() => computePricing(partner), [partner]);
   const tier    = pricing.tier;
@@ -595,6 +597,22 @@ function Dashboard({ partnerId, evaluation, evalLoading, onSelectPlan, onViewCla
             </div>
           </div>
         )}
+
+        {/* Simulation CTA */}
+        <div className="sim-cta-strip">
+          <div className="sim-cta-left">
+            <div className="sim-cta-icon">
+              <Satellite size={22} color="#6366F1" />
+            </div>
+            <div>
+              <div style={{fontSize:15,fontWeight:700,color:"var(--purple-dark)",letterSpacing:-0.2}}>Disruption Simulation</div>
+              <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>Run a live weather scenario → ML pipeline → payout calculation using real backend endpoints</div>
+            </div>
+          </div>
+          <button className="sim-cta-btn" onClick={onSimulate}>
+            <Satellite size={14} /> Run Simulation <ChevronRight size={14} />
+          </button>
+        </div>
 
         {/* Pay bar */}
         <div className="pay-bar">
@@ -1137,6 +1155,7 @@ export default function App() {
           onSelectPlan={() => setScreen("plans")}
           onViewClaim={() => setScreen("claim")}
           onPayPremium={() => setScreen("plans")}
+          onSimulate={() => setScreen("simulation")}
           onLogout={() => { setPartnerId(null); setScreen("login"); }}
         />
       )}
@@ -1169,6 +1188,13 @@ export default function App() {
           evalLoading={evalLoading}
           onBack={() => setScreen("dashboard")}
           onPayPremium={() => setScreen("plans")}
+        />
+      )}
+      {screen === "simulation" && partnerId && (
+        <SimulationPage
+          partnerId={partnerId}
+          partnerData={PARTNERS[partnerId]}
+          onBack={() => setScreen("dashboard")}
         />
       )}
     </div>
