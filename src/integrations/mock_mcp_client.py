@@ -116,10 +116,20 @@ def should_use_mock_mcp() -> bool:
     return os.getenv("GIGSHIELD_USE_MOCK_MCP", "true").strip().lower() in ("1", "true", "yes", "on")
 
 
-def default_mcp_client() -> Optional[Union[MockMCPClient, "HttpMockApiMCPClient"]]:
+def default_mcp_client() -> Optional[Union[MockMCPClient, "HttpMockApiMCPClient", "RealTimeMCPClient"]]:
+    # Priority 1: Real MCP server (live weather/news/crawl)
+    mcp_url = (os.getenv("MCP_SERVER_URL") or "").strip().rstrip("/")
+    if mcp_url:
+        from src.integrations.mcp_client import RealTimeMCPClient
+
+        return RealTimeMCPClient(server_url=mcp_url)
+
+    # Priority 2: HTTP mock API server
     base = (os.getenv("GIGSHIELD_MOCK_API_BASE") or "").strip().rstrip("/")
     if base:
         from src.integrations.http_mock_api_client import HttpMockApiMCPClient
 
         return HttpMockApiMCPClient(base_url=base)
+
+    # Priority 3: In-memory mock
     return MockMCPClient() if should_use_mock_mcp() else None

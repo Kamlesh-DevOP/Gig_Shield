@@ -23,6 +23,9 @@
 * [18. MARKET CRASH: Adversarial Defense & Anti-Spoofing Strategy](#18-market-crash-adversarial-defense--anti-spoofing-strategy)
 
 ---
+Phase 2 - MVP DEMO: [https://youtu.be/R_gsjeeOfl4](https://youtu.be/R_gsjeeOfl4)
+Backend URL - Run this before opening the vercel app: [https://gig-insurance-company.onrender.com/](https://gig-insurance-company.onrender.com/)
+Vercel App - [https://gig-insurance-company-gic.vercel.app/](https://gig-insurance-company-gic.vercel.app/)
 
 Prototype Demo: [https://youtu.be/hLz2ZEhvils](https://youtu.be/hLz2ZEhvils)
 

@@ -33,6 +33,7 @@ lime>=0.2.0.1
 
 # Vector Database & Embeddings (use `pinecone`, not deprecated `pinecone-client`)
 pinecone>=5.0.0,<8.0.0
+chromadb>=0.5.0
 sentence-transformers>=2.2.2
 groq
 
@@ -78,3 +79,8 @@ haversine>=2.8.0
 # Testing
 pytest>=7.4.3
 pytest-cov>=4.1.0
+
+# MCP Server Layer (Real-Time Tracking)
+mcp[cli]>=1.0.0
+tavily-python>=0.5.0
+httpx>=0.27.0

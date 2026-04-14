@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
@@ -124,6 +125,7 @@ class GigShieldGraphState(TypedDict, total=False):
     trace_id: str
     worker_row: Dict[str, Any]
     city: str
+    work_type: str
     context_question: Optional[str]
     monitor_report: str
     validation_report: str
@@ -133,6 +135,7 @@ class GigShieldGraphState(TypedDict, total=False):
     rules_specialist_report: str
     decision_agent_report: str
     ml_bundle: Dict[str, Any]
+    mcp_risk_profile: Optional[Dict[str, Any]]  # analyze_localized_risk output
     decision_code: str
     confidence: float
     payout_amount: float
@@ -255,8 +258,33 @@ class GigShieldLangGraphOrchestrator:
     async def _node_monitor(self, state: GigShieldGraphState) -> Dict[str, Any]:
         self.trace_holder["trace_id"] = state["trace_id"]
         city = state.get("city") or "unknown"
-        out = await self._ex_monitor.ainvoke({"input": f"Assess {city} for parametric triggers. worker_id={state['worker_row'].get('worker_id')}"})
-        return {"monitor_report": str(out.get("output", ""))}
+        work_type = state.get("work_type") or str(state["worker_row"].get("employment_type", "delivery"))
+        wid = state["worker_row"].get("worker_id")
+
+        out = await self._ex_monitor.ainvoke(
+            {"input": (
+                f"Assess {city} for parametric triggers. worker_id={wid} sector={work_type}. "
+                "Use fetch_live_disruption_signals, fetch_live_news, crawl_for_hazards, "
+                "and fetch_mcp_risk_analysis to gather all live signals. "
+                "Output a concise Markdown report citing tool results."
+            )}
+        )
+
+        # Also capture the raw MCP risk profile for graph state
+        mcp_risk_profile: Optional[Dict[str, Any]] = None
+        mcp_url = os.getenv("MCP_SERVER_URL", "").strip()
+        if mcp_url:
+            try:
+                from backend.services.mcp_client import get_dynamic_risk_profile
+                mcp_risk_profile = await get_dynamic_risk_profile(city=city, work_type=work_type)
+            except Exception:
+                pass
+
+        return {
+            "monitor_report": str(out.get("output", "")),
+            "mcp_risk_profile": mcp_risk_profile,
+            "work_type": work_type,
+        }
 
     async def _node_validation(self, state: GigShieldGraphState) -> Dict[str, Any]:
         blob = state.get("monitor_report", "")
@@ -317,6 +345,15 @@ class GigShieldLangGraphOrchestrator:
         }
 
     async def _node_decision(self, state: GigShieldGraphState) -> Dict[str, Any]:
+        mcp_risk = state.get("mcp_risk_profile") or {}
+        mcp_summary = ""
+        if mcp_risk and not mcp_risk.get("fallback"):
+            mcp_summary = (
+                f"\nLive MCP Risk Profile: overall_risk={mcp_risk.get('overall_risk_level')}, "
+                f"combined_multiplier={mcp_risk.get('combined_multiplier')}, "
+                f"formula={mcp_risk.get('market_intel', {}).get('formula', '')}"
+            )
+
         packet = {
             "monitor": state.get("monitor_report"),
             "validation": state.get("validation_report"),
@@ -325,9 +362,14 @@ class GigShieldLangGraphOrchestrator:
             "risk_specialist": state.get("risk_specialist_report"),
             "rules_specialist": state.get("rules_specialist_report"),
             "ml_bundle": state.get("ml_bundle"),
+            "mcp_risk_profile": mcp_risk if mcp_risk else "Not available",
         }
         out = await self._ex_decision.ainvoke(
-            {"input": "Synthesize the following JSON into a final underwriting decision object:\n" + json.dumps(packet, default=str)[:14000]}
+            {"input": (
+                "Synthesize the following JSON into a final underwriting decision object." +
+                mcp_summary + "\n" +
+                json.dumps(packet, default=str)[:14000]
+            )}
         )
         return {"decision_agent_report": str(out.get("output", ""))}
 
@@ -372,6 +414,7 @@ class GigShieldLangGraphOrchestrator:
     async def _node_persist(self, state: GigShieldGraphState) -> Dict[str, Any]:
         row = state["worker_row"]
         wid = int(row.get("worker_id", 0))
+        mcp_risk = state.get("mcp_risk_profile") or {}
         payload = {
             "graph": True,
             "monitor_report": (state.get("monitor_report") or "")[:4000],
@@ -382,6 +425,8 @@ class GigShieldLangGraphOrchestrator:
             "rules_specialist_report": (state.get("rules_specialist_report") or "")[:4000],
             "decision_agent_report": (state.get("decision_agent_report") or "")[:4000],
             "ml_keys": list((state.get("ml_bundle") or {}).get("ml_predictions", {}).keys()),
+            "mcp_risk_level": mcp_risk.get("overall_risk_level"),
+            "mcp_combined_multiplier": mcp_risk.get("combined_multiplier"),
         }
         try:
             from src.persistence.supabase_client import insert_decision_any
@@ -400,7 +445,13 @@ class GigShieldLangGraphOrchestrator:
             return {"errors": err}
         return {}
 
-    async def run(self, worker_data: pd.DataFrame, city: Optional[str] = None, context_question: Optional[str] = None) -> GigShieldGraphResult:
+    async def run(
+        self,
+        worker_data: pd.DataFrame,
+        city: Optional[str] = None,
+        context_question: Optional[str] = None,
+        work_type: Optional[str] = None,
+    ) -> GigShieldGraphResult:
         start = datetime.now()
         worker_data = ensure_worker_columns(worker_data)
         row = worker_data.iloc[0].to_dict()
@@ -411,6 +462,7 @@ class GigShieldLangGraphOrchestrator:
             "trace_id": trace_id,
             "worker_row": row,
             "city": city or str(row.get("city", "Mumbai")),
+            "work_type": work_type or str(row.get("employment_type", "delivery")),
             "context_question": context_question,
             "errors": [],
         }

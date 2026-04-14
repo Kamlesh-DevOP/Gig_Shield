@@ -166,15 +166,30 @@ class MonitorAgent(BaseAgent):
 
     async def process(self, input_data: Dict[str, Any], trace_id: str) -> AgentMessage:
         city = input_data.get("city", "unknown")
+        work_type = input_data.get("work_type", "delivery")
         ctx = {k: input_data[k] for k in ("worker_id", "outlet_id", "worker_row") if k in input_data}
         mcp_bundle: Dict[str, Any] = {}
+        mcp_risk_profile: Optional[Dict[str, Any]] = None
+
         if self.mcp_client is not None:
             mcp_bundle = await self.mcp_client.get_monitoring_signals(str(city), context=ctx)
             weather = dict(mcp_bundle.get("weather") or {})
             regional = dict(mcp_bundle.get("regional") or {})
+
+            # ── NEW: Composite MCP risk analysis (premium multiplier) ──────
+            # Only call if mcp_client exposes _call_tool (RealTimeMCPClient)
+            if hasattr(self.mcp_client, "_call_tool"):
+                try:
+                    mcp_risk_profile = await self.mcp_client._call_tool(
+                        "analyze_localized_risk",
+                        {"location": str(city), "sector": work_type},
+                    )
+                except Exception:
+                    mcp_risk_profile = None
         else:
             weather = await self.fetch_weather_data(str(city), context=ctx)
             regional = {}
+
         triggers = await self.check_trigger_conditions(weather)
         self._enrich_triggers(triggers, regional)
         mtype = "trigger_detected" if triggers else "no_trigger"
@@ -184,6 +199,7 @@ class MonitorAgent(BaseAgent):
                 "triggers": triggers,
                 "weather_data": weather,
                 "mcp_bundle": mcp_bundle if mcp_bundle else None,
+                "mcp_risk_profile": mcp_risk_profile,
             },
             trace_id,
             priority="high" if triggers else "low",

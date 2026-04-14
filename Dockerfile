@@ -44,5 +44,5 @@ RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTr
 ENV PORT=10000
 EXPOSE ${PORT}
 
-# ── 6. Start uvicorn ────────────────────────────────────────────────
-CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT} --workers 1 --timeout-keep-alive 120"]
+# ── 6. Start services using unified script ──────────────────────────────
+CMD ["bash", "start_render.sh"]
