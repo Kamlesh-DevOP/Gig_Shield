@@ -1,4 +1,4 @@
-"""FastAPI HTTP layer for GigShield (LangGraph, classic orchestrator, ML, RAG)."""
+"""FastAPI HTTP layer for GIC (LangGraph, classic orchestrator, ML, RAG)."""
 
 from src.api.main import app, create_app
 

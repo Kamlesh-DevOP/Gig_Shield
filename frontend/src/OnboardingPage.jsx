@@ -137,7 +137,7 @@ function SuccessScreen({ form, onBack }) {
       </div>
       <div className="ob-success-title">You're all set!</div>
       <div style={{ fontSize: 14, color: "var(--muted)", marginBottom: 28, lineHeight: 1.6 }}>
-        Welcome to GigShield, <strong style={{ color: "var(--purple-dark)" }}>{form.name}</strong>!
+        Welcome to GIC, <strong style={{ color: "var(--purple-dark)" }}>{form.name}</strong>!
         Your account is registered. Login now to access your dashboard.
       </div>
 
@@ -238,8 +238,8 @@ export default function OnboardingPage({ onBack }) {
           <div className="l-logo">
             <div className="l-logomark"><Shield size={20} /></div>
             <div>
-              <div className="l-logotype-name">GigShield</div>
-              <div className="l-logotype-sub">Gig Insurance Platform</div>
+              <div className="l-logotype-name">GIC</div>
+              <div className="l-logotype-sub">Gig Insurance Company</div>
             </div>
           </div>
           <h1 className="l-headline">

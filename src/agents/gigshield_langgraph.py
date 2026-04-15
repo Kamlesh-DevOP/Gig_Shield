@@ -189,41 +189,41 @@ class GigShieldLangGraphOrchestrator:
 
         self._ex_monitor = _agent_executor_factory(
             self.llm,
-            "You are GigShield MonitorAgent. Use tools to pull live disruption-style signals and knowledge. "
+            "You are GIC MonitorAgent. Use tools to pull live disruption-style signals and knowledge. "
             "Output a concise Markdown report: observed triggers, city, citing tool results.",
             tools_map["monitor"],
         )
         self._ex_validation = _agent_executor_factory(
             self.llm,
-            "You are GigShield ValidationAgent. Cross-check monitor findings vs policy/disruption KB using tools. "
+            "You are GIC ValidationAgent. Cross-check monitor findings vs policy/disruption KB using tools. "
             "State whether triggers are plausible and what evidence you used.",
             tools_map["validation"],
         )
         self._ex_context = _agent_executor_factory(
             self.llm,
-            "You are GigShield ContextAgent. Gather policy/regional/fraud context for underwriting using tools. "
+            "You are GIC ContextAgent. Gather policy/regional/fraud context for underwriting using tools. "
             "Summarize implications in bullets.",
             tools_map["context"],
         )
         self._ex_fraud = _agent_executor_factory(
             self.llm,
-            "You are GigShield Fraud specialist. Combine ML/rule fraud signals below with fraud playbooks via tools. "
+            "You are GIC Fraud specialist. Combine ML/rule fraud signals below with fraud playbooks via tools. "
             "Do not invent numeric scores; cite tools and given JSON.",
             tools_map["fraud"],
         )
         self._ex_risk = _agent_executor_factory(
             self.llm,
-            "You are GigShield Risk specialist. Explain risk posture using policy KB and the supplied risk JSON.",
+            "You are GIC Risk specialist. Explain risk posture using policy KB and the supplied risk JSON.",
             tools_map["risk"],
         )
         self._ex_rules = _agent_executor_factory(
             self.llm,
-            "You are GigShield Rules specialist. Map business rules (cooling, premium, employment) to policy text using tools.",
+            "You are GIC Rules specialist. Map business rules (cooling, premium, employment) to policy text using tools.",
             tools_map["rules"],
         )
         self._ex_decision = _agent_executor_factory(
             self.llm,
-            "You are GigShield DecisionAgent. Read all prior agent reports and tools. "
+            "You are GIC DecisionAgent. Read all prior agent reports and tools. "
             "Finish with a single JSON object: {\"recommendation\":\"auto_approve|auto_reject|manual_review\", "
             "\"confidence\":0-1,\"rationale\":\"...\"} and no other trailing text.",
             tools_map["decision"],

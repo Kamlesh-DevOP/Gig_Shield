@@ -1,1 +1,1 @@
-# GigShield RAG package
+# GIC RAG package

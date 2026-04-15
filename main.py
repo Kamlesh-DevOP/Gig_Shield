@@ -1,5 +1,5 @@
 """
-GigShield ML Pipeline - Main Execution Script
+GIC ML Pipeline - Main Execution Script
 Choose between training mode or inference mode
 """
 
@@ -24,7 +24,7 @@ import pandas as pd
 
 def train_models(data_path: str):
     """Train all ML models"""
-    print("\n🚀 Starting GigShield Model Training...")
+    print("\n🚀 Starting GIC Model Training...")
     
     pipeline = MLTrainingPipeline(data_path)
     models = pipeline.run_complete_training()
@@ -37,7 +37,7 @@ def train_models(data_path: str):
 
 def run_inference(worker_data_path: str, model_dir: str = 'models'):
     """Run inference on worker data"""
-    print("\n🚀 Starting GigShield Inference Pipeline...")
+    print("\n🚀 Starting GIC Inference Pipeline...")
     
     # Load worker data
     worker_df = pd.read_csv(worker_data_path)
@@ -76,7 +76,7 @@ def run_inference(worker_data_path: str, model_dir: str = 'models'):
 
 async def run_autonomous_system(worker_data_path: str, model_dir: str = "models"):
     """Run complete autonomous insurance system"""
-    print("\n🚀 Starting GigShield Autonomous System...")
+    print("\n🚀 Starting GIC Autonomous System...")
 
     print("\nInitializing Knowledge Base...")
     vector_store = VectorStore()
@@ -116,7 +116,7 @@ async def run_autonomous_langchain_system(worker_data_path: str, model_dir: str 
     """Run RAG + LangChain orchestrator (requires GROQ_API_KEY for LLM chains; RAG still works)."""
     from src.agents.langchain_orchestrator import GigShieldLangChainOrchestrator
 
-    print("\n🚀 GigShield LangChain + RAG pipeline...")
+    print("\n🚀 GIC LangChain + RAG pipeline...")
     from src.utils.schema import ensure_worker_columns
 
     worker_df = ensure_worker_columns(pd.read_csv(worker_data_path))
@@ -164,7 +164,7 @@ async def run_autonomous_langgraph_system(worker_data_path: str, model_dir: str 
     from src.agents.gigshield_langgraph import GigShieldLangGraphOrchestrator
     from src.utils.schema import ensure_worker_columns
 
-    print("\n🚀 GigShield LangGraph multi-agent (tool-calling) pipeline...")
+    print("\n🚀 GIC LangGraph multi-agent (tool-calling) pipeline...")
     worker_df = ensure_worker_columns(pd.read_csv(worker_data_path))
     model_paths = {
         "income_forecasting": f"{model_dir}/income_forecasting",
@@ -230,7 +230,7 @@ def setup_directories():
 
 
 def main():
-    parser = argparse.ArgumentParser(description='GigShield ML Pipeline')
+    parser = argparse.ArgumentParser(description='GIC ML Pipeline')
     
     parser.add_argument(
         '--mode',

@@ -1,6 +1,6 @@
-# GigShield — Quick Start Guide
+# GIC — Quick Start Guide
 
-> **GigShield** is an AI-powered parametric insurance platform for gig workers. It uses ML models, multi-agent orchestration (LangChain + LangGraph), RAG-augmented decision-making, and MCP-integrated external signals to automatically detect weather/disruption events and trigger payouts — no paperwork required.
+> **Gig Insurance Company (GIC)** is an AI-powered parametric insurance platform for gig workers. It uses ML models, multi-agent orchestration (LangChain + LangGraph), RAG-augmented decision-making, and MCP-integrated external signals to automatically detect weather/disruption events and trigger payouts — no paperwork required.
 
 ---
 
@@ -236,7 +236,7 @@ MCP Layer → Weather API → ML Inference → Agent Analysis → Eligibility Ch
 
 ## 🤖 Multi-Agent System
 
-GigShield implements **8 specialized agents** that communicate via structured `AgentMessage` objects with trace IDs, priorities, and typed payloads.
+GIC implements **8 specialized agents** that communicate via structured `AgentMessage` objects with trace IDs, priorities, and typed payloads.
 
 ### Agent Roster
 
@@ -270,7 +270,7 @@ Agents in **Layer 4** (Fraud, Risk, Rules) run in **parallel** via `asyncio.gath
 
 ## 🎭 Three Orchestration Modes
 
-GigShield offers **three** progressively-richer orchestration strategies:
+GIC offers **three** progressively-richer orchestration strategies:
 
 ### 1. Classic Orchestrator (`GigShieldOrchestrator`)
 **File:** `src/pipeline/orchestrator.py`  
@@ -667,7 +667,7 @@ curl -X POST http://localhost:8000/api/inference/predict \
 ### LangGraph orchestrator offline
 - Ensure `GROQ_API_KEY` is set in `.env` — the LangGraph mode **requires** an LLM
 - The classic orchestrator (`/api/claims/process-classic`) still works without it
-- Check console for: `[GigShield API] Warning: LangGraph offline (check GROQ_API_KEY)`
+- Check console for: `[GIC API] Warning: LangGraph offline (check GROQ_API_KEY)`
 
 ### Pinecone dimension mismatch
 - Set `PINECONE_INDEX_NAME` to your **exact** index name from the Pinecone console

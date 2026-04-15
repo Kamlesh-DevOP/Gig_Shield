@@ -1,1 +1,1 @@
-# GigShield config package
+# GIC config package

@@ -1,1 +1,1 @@
-# GigShield agents package
+# GIC agents package

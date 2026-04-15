@@ -1,1 +1,1 @@
-# GigShield source package
+# GIC source package

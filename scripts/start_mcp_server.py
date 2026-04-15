@@ -23,7 +23,7 @@ MCP_LAYER = ROOT / "mcp-layer" / "server.py"
 def main():
     port = int(os.getenv("MCP_SERVER_PORT", "5100"))
 
-    print(f"\n🚀 Starting GigShield MCP Layer on http://localhost:{port}")
+    print(f"\n🚀 Starting GIC MCP Layer on http://localhost:{port}")
     print("   Tools : get_weather · get_news · crawl_web · analyze_localized_risk")
     print(f"   Docs  : http://localhost:{port}/docs")
     print(f"   Health: http://localhost:{port}/health")

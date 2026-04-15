@@ -1,5 +1,5 @@
 """
-GigShield FastAPI entrypoint.
+GIC FastAPI entrypoint.
 
 Run from repository root (recommended):
 

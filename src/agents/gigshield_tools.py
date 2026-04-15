@@ -1,5 +1,5 @@
 """
-LangChain @tool callables for GigShield agents (RAG, MCP Layer, persistence).
+LangChain @tool callables for GIC agents (RAG, MCP Layer, persistence).
 Bindings are created via factory so each tool closes over RAGRetriever / optional Supabase / trace context.
 
 MCP Integration:

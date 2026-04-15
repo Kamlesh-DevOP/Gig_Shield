@@ -230,7 +230,7 @@ class MLTrainingPipeline:
     def run_complete_training(self):
         """Execute complete training pipeline"""
         print("\n" + "=" * 70)
-        print(" " * 15 + "GIGSHIELD ML TRAINING PIPELINE")
+        print(" " * 15 + "GIC ML TRAINING PIPELINE")
         print("=" * 70)
         
         # Load data

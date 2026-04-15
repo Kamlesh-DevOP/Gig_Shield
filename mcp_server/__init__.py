@@ -1,1 +1,1 @@
-# MCP Server package for GigShield Real-Time Tracking
+# MCP Server package for GIC Real-Time Tracking

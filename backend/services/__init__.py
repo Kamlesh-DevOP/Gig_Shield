@@ -1,1 +1,1 @@
-# GigShield backend services package
+# GIC backend services package

@@ -35,7 +35,7 @@ def check(label, condition, detail=""):
 
 
 print("\n" + "="*65)
-print("  GIGSHIELD ARCHITECTURE AUDIT — Full Pipeline Check")
+print("  GIC ARCHITECTURE AUDIT — Full Pipeline Check")
 print("="*65)
 
 # ── Layer 0: MCP Server health ───────────────────────────────

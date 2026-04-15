@@ -595,7 +595,7 @@ def analyze_localized_risk(location: str, sector: str) -> str:
 # ═══════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
-    logger.info("Starting GigShield MCP Server (FastMCP/SSE mode)...")
+    logger.info("Starting GIC MCP Server (FastMCP/SSE mode)...")
     logger.info("Tools registered: get_weather, get_news, crawl_web, analyze_localized_risk")
     logger.info("Tip: For HTTP /call-tool interface, run: python scripts/start_mcp_server.py")
     mcp.run(transport="sse")

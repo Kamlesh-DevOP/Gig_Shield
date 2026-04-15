@@ -1,1 +1,1 @@
-# GigShield pipeline package
+# GIC pipeline package

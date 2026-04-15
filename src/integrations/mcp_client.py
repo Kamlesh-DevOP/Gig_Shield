@@ -1,5 +1,5 @@
 """
-Real-Time MCP Client for GigShield.
+Real-Time MCP Client for GIC.
 
 Connects to the MCP server (mcp_server/server.py) and calls the get_weather,
 get_news, and crawl_web tools. Returns data in the same bundle shape that

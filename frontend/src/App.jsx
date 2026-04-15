@@ -417,7 +417,7 @@ function LoginPage({ onLogin, onRegister }) {
             ))}
           </div>
           <div className="l-hint" style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
-            New to GigShield?{" "}
+            New to GIC?{" "}
             <span id="go-register" onClick={onRegister} style={{ color: "var(--purple)", fontWeight: 700, cursor: "pointer" }}>Register here →</span>
           </div>
         </div>
