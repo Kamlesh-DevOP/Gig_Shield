@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import { TrendingUp, AlertTriangle, Users, DollarSign, LayoutDashboard, Telescope, Radar } from 'lucide-react';
 
-const COLORS = ['#8B5CF6', '#A78BFA', '#C4B5FD', '#10B981', '#F87171'];
+const COLORS = ['#6B2D8B', '#C4A8E0', '#5B21B6', '#0D7A56', '#B91C1C'];
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -37,15 +37,8 @@ const Dashboard = () => {
 
         if (workerErr) throw workerErr;
 
-        // Fetch decisions to get payouts
-        const { data: decisions, error: decErr } = await supabase
-          .from('gigshield_decisions')
-          .select('payout_amount, created_at')
-          .gt('payout_amount', 0);
-
-        if (decErr) throw decErr;
-
         let premiumSum = 0;
+        let payoutSum = 0;
         let slabCounts = {};
         let disruptionCount = 0;
         let disruptionTypeMap = {};
@@ -59,8 +52,11 @@ const Dashboard = () => {
           const slab = rec.selected_slab || 'Unknown';
           const premium = parseFloat(rec.premium_amount || 0);
           const estimatedPremium = premium || (slab.toLowerCase().includes('premium') ? 1500 : 500);
+          
+          const actualPayout = parseFloat(rec.final_payout_amount || 0);
 
           premiumSum += estimatedPremium;
+          payoutSum += actualPayout;
           slabCounts[slab] = (slabCounts[slab] || 0) + 1;
 
           if (rec.disruption_type && rec.disruption_type.toLowerCase() !== 'none') {
@@ -93,8 +89,6 @@ const Dashboard = () => {
             riskWorkers += 1;
           }
         });
-
-        const payoutSum = decisions.reduce((acc, curr) => acc + (curr.payout_amount || 0), 0);
 
         const slabPieData = Object.keys(slabCounts).map(key => ({
           name: key,
@@ -183,10 +177,10 @@ const Dashboard = () => {
         <div className="metric-item">
           <div className="metric-header">
             <span className="metric-label">Amount Rolled Out</span>
-            <DollarSign className="metric-icon" style={{ color: '#F87171' }} size={16} />
+            <DollarSign className="metric-icon" style={{ color: 'var(--red)' }} size={16} />
           </div>
           <div className="metric-value">{formatCurrency(stats.totalPayout)}</div>
-          <div className="metric-trend" style={{ color: '#F87171' }}>Auto-disbursed</div>
+          <div className="metric-trend" style={{ color: 'var(--red)' }}>Auto-disbursed</div>
         </div>
 
         <div className="metric-divider"></div>
@@ -205,7 +199,7 @@ const Dashboard = () => {
         <div className="metric-item">
           <div className="metric-header">
             <span className="metric-label">Anomalies Detected</span>
-            <AlertTriangle className="metric-icon" style={{ color: '#F87171' }} size={16} />
+            <AlertTriangle className="metric-icon" style={{ color: 'var(--red)' }} size={16} />
           </div>
           <div className="metric-value">{stats.disruptions} <span className="metric-unit">events</span></div>
           <div className="metric-trend text-secondary">Historical flagged risks</div>
@@ -254,11 +248,11 @@ const Dashboard = () => {
             </div>
 
             <div className="pred-card highlight">
-              <span className="pred-label" style={{color: '#F8FAFC'}}>Net Profit Forecast margin</span>
+              <span className="pred-label" style={{color: 'var(--text-dark)'}}>Net Profit Forecast margin</span>
               <div className={`pred-val ${stats.netProfitForecast >= 0 ? 'text-success' : 'text-danger'}`}>
                 {formatCurrency(stats.netProfitForecast)}
               </div>
-              <div className="pred-sub" style={{color: 'rgba(255,255,255,0.7)'}}>AI derived cycle profitability</div>
+              <div className="pred-sub" style={{color: 'var(--muted-dark)'}}>AI derived cycle profitability</div>
             </div>
           </div>
         )}
@@ -275,23 +269,23 @@ const Dashboard = () => {
               <AreaChart data={stats.lossRatioData}>
                 <defs>
                   <linearGradient id="colorRatio" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.6} />
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                    <stop offset="5%" stopColor="var(--green)" stopOpacity={0.6} />
+                    <stop offset="95%" stopColor="var(--green)" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorPred" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
+                    <stop offset="5%" stopColor="var(--red)" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="var(--red)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis dataKey="name" stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} dy={10} />
-                <YAxis stroke="#64748B" tickFormatter={(v) => `${v}%`} fontSize={11} tickLine={false} axisLine={false} dx={-10} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(107,45,139,0.1)" vertical={false} />
+                <XAxis dataKey="name" stroke="var(--muted-dark)" fontSize={11} tickLine={false} axisLine={false} dy={10} />
+                <YAxis stroke="var(--muted-dark)" tickFormatter={(v) => `${v}%`} fontSize={11} tickLine={false} axisLine={false} dx={-10} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#1E293B', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '12px' }}
-                  itemStyle={{ fontSize: '13px', fontWeight: 600 }}
+                  contentStyle={{ backgroundColor: 'var(--surface-dark)', borderColor: 'var(--border-dark)', borderRadius: '8px', fontSize: '12px', color: 'var(--text-dark)' }}
+                  itemStyle={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-dark)' }}
                 />
-                <Area type="monotone" dataKey="ratio" stroke="#10B981" strokeWidth={2} fillOpacity={1} fill="url(#colorRatio)" name="Actual Loss Ratio %" />
-                <Area type="monotone" dataKey="predictions" stroke="#EF4444" strokeWidth={2} fillOpacity={1} fill="url(#colorPred)" name="Predictive Disruption Probability %" strokeDasharray="4 4" />
+                <Area type="monotone" dataKey="ratio" stroke="var(--green)" strokeWidth={2} fillOpacity={1} fill="url(#colorRatio)" name="Actual Loss Ratio %" />
+                <Area type="monotone" dataKey="predictions" stroke="var(--red)" strokeWidth={2} fillOpacity={1} fill="url(#colorPred)" name="Predictive Disruption Probability %" strokeDasharray="4 4" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -320,9 +314,9 @@ const Dashboard = () => {
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#1E293B', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: 'var(--surface-dark)', borderColor: 'var(--border-dark)', borderRadius: '8px', fontSize: '12px', color: 'var(--text-dark)' }}
                 />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#94A3B8' }} />
+                <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', color: 'var(--muted-dark)' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -338,14 +332,14 @@ const Dashboard = () => {
           <div style={{ height: '260px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stats.disruptionTypeData} margin={{ top: 10, right: 20, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                <XAxis dataKey="name" stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} dy={5} />
-                <YAxis stroke="#64748B" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} dx={-5} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(107,45,139,0.1)" vertical={false} />
+                <XAxis dataKey="name" stroke="var(--muted-dark)" fontSize={12} tickLine={false} axisLine={false} dy={5} />
+                <YAxis stroke="var(--muted-dark)" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} dx={-5} />
                 <Tooltip 
-                  cursor={{ fill: 'rgba(139, 92, 246, 0.1)' }}
-                  contentStyle={{ backgroundColor: '#1E293B', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: '12px' }}
+                  cursor={{ fill: 'rgba(107, 45, 139, 0.1)' }}
+                  contentStyle={{ backgroundColor: 'var(--surface-dark)', borderColor: 'var(--border-dark)', borderRadius: '8px', fontSize: '12px', color: 'var(--text-dark)' }}
                 />
-                <Bar dataKey="Anomalies" fill="#8B5CF6" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="Anomalies" fill="var(--accent)" radius={[4, 4, 0, 0]}>
                   {stats.disruptionTypeData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
@@ -362,12 +356,12 @@ const Dashboard = () => {
           <p style={{ fontSize: '0.85rem', color: 'var(--muted-dark)', lineHeight: '1.6' }}>
             Wondering how we predict these numbers? Our sophisticated LangChain <strong>MonitorAgent</strong> continuously scans global weather and news APIs for upcoming disruptions, while parallel agents verify worker geo-location patterns.
           </p>
-          <div style={{ marginTop: '0.5rem', padding: '1rem', background: 'rgba(15, 23, 42, 0.5)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <h4 style={{ fontSize: '0.8rem', color: '#F8FAFC', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ marginTop: '0.5rem', padding: '1rem', background: 'rgba(107, 45, 139, 0.05)', borderRadius: '8px', border: '1px solid rgba(107, 45, 139, 0.1)' }}>
+            <h4 style={{ fontSize: '0.8rem', color: 'var(--purple-dark)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <TrendingUp size={14} className="text-accent" /> Actuarial Machine Learning
             </h4>
             <p style={{ fontSize: '0.8rem', color: 'var(--muted-dark)', lineHeight: '1.5' }}>
-              Instead of guessing, an array of 6 Deep Learning pipelines runs the math! An <strong style={{color: '#E2E8F0'}}>LSTM Model</strong> forecasts each worker's weekly baseline income, while an <strong style={{color: '#E2E8F0'}}>XGBoost</strong> model calculates the exact financial loss radius when a specific disruption impacts their city.
+              Instead of guessing, an array of 6 Deep Learning pipelines runs the math! An <strong style={{color: 'var(--text-dark)'}}>LSTM Model</strong> forecasts each worker's weekly baseline income, while an <strong style={{color: 'var(--text-dark)'}}>XGBoost</strong> model calculates the exact financial loss radius when a specific disruption impacts their city.
             </p>
           </div>
         </div>

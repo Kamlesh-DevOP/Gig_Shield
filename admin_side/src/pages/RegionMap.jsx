@@ -70,17 +70,7 @@ const RegionMap = () => {
         
         if (error) throw error;
 
-        const { data: decisions, error: decErr } = await supabase
-          .from('gigshield_decisions')
-          .select('worker_id, payout_amount')
-          .gt('payout_amount', 0);
-          
-        if (decErr) throw decErr;
 
-        const payoutM = {};
-        decisions.forEach(d => {
-           payoutM[d.worker_id] = (payoutM[d.worker_id] || 0) + (d.payout_amount || 0);
-        });
 
         const citiesObj = {};
 
@@ -111,7 +101,7 @@ const RegionMap = () => {
               const premium = parseFloat(rec.premium_amount || 0);
               const estimatedPremium = premium || (rec.selected_slab?.toLowerCase().includes('premium') ? 1500 : 500);
               citiesObj[rawCity].premium += estimatedPremium;
-              citiesObj[rawCity].payout += payoutM[w.worker_id] || 0;
+              citiesObj[rawCity].payout += parseFloat(rec.final_payout_amount || 0);
           }
         });
 
@@ -149,7 +139,7 @@ const RegionMap = () => {
     }}>
       <div className="flex-between" style={{ marginBottom: '1rem' }}>
         <div>
-          <h2 style={{color: '#F8FAFC'}}>City Coverage Insights</h2>
+          <h2 style={{color: 'var(--purple-dark)'}}>City Coverage Insights</h2>
           <p className="text-secondary">Viewing active worker distribution across operational cities.</p>
         </div>
       </div>
@@ -169,8 +159,8 @@ const RegionMap = () => {
             <Geographies geography={INDIA_TOPO_JSON}>
               {({ geographies }) =>
                 geographies.map((geo, index) => {
-                  // A palette of sleek, modern dark-jewel tones to make it colorful but professional
-                  const colors = ['#1E1B4B', '#172554', '#064E3B', '#0F172A', '#312E81', '#111827'];
+                  // A more colorful vibrant light pastel palette
+                  const colors = ['#E9D5FF', '#C4B5FD', '#A78BFA', '#93C5FD', '#A7F3D0', '#FBCFE8'];
                   const geoColor = colors[index % colors.length];
 
                   return (
@@ -178,11 +168,11 @@ const RegionMap = () => {
                       key={geo.rsmKey}
                       geography={geo}
                       fill={geoColor} 
-                      stroke="rgba(167, 139, 250, 0.45)" // Purple-lt colored neon stroke
+                      stroke="#C4A8E0" 
                       strokeWidth={1.5}
                       style={{
                         default: { outline: "none", transition: "fill 0.3s" },
-                        hover: { outline: "none", fill: "#8B5CF6", cursor: "pointer" },
+                        hover: { outline: "none", fill: "#C4A8E0", cursor: "pointer" },
                         pressed: { outline: "none" }
                       }}
                     />
@@ -209,8 +199,8 @@ const RegionMap = () => {
                 }}
               >
                 {/* Glow effect */}
-                <circle r={sizeScale(city.workers) + 3} fill="rgba(139, 92, 246, 0.3)" />
-                <circle r={sizeScale(city.workers)} fill="#8B5CF6" stroke="#FFFFFF" strokeWidth={1.5} />
+                <circle r={sizeScale(city.workers) + 3} fill="rgba(107, 45, 139, 0.2)" />
+                <circle r={sizeScale(city.workers)} fill="#6B2D8B" stroke="#FFFFFF" strokeWidth={1.5} />
               </Marker>
             ))}
         </ComposableMap>
@@ -232,7 +222,7 @@ const RegionMap = () => {
             </div>
             <div className="flex-between">
               <span className="text-secondary">City Premium:</span>
-              <strong className="text-accent" style={{fontFamily: 'Inter, sans-serif'}}>{formatCurrency(tooltipContent.premium)}</strong>
+              <strong style={{fontFamily: 'Inter, sans-serif', color: 'var(--purple-dark)'}}>{formatCurrency(tooltipContent.premium)}</strong>
             </div>
             <div className="flex-between">
               <span className="text-secondary">Rolled Out:</span>
