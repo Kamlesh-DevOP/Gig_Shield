@@ -730,6 +730,300 @@ def create_app() -> FastAPI:
             logger.warning("Payment verification failed for order: %s", req.get("razorpay_order_id"))
             raise HTTPException(status_code=400, detail="Invalid payment signature")
 
+    # ───────────────────────────────────────────────────────────────────
+    # Disruption Simulation Endpoint
+    # ───────────────────────────────────────────────────────────────────
+
+    @application.post("/api/simulate/disruption", tags=["Simulation"])
+    async def simulate_disruption(req: Dict[str, Any]):
+        """
+        Simulate a disruption for a specific city + area.
+        - Fetches all workers from gigshield_workers where city matches
+        - Filters by outlet_lat/lon proximity to known area center (Haversine)
+        - Augments each worker record with disruption overrides
+        - Runs classic orchestrator for each matched worker
+        - Returns aggregated payout + risk metrics for dashboard
+        """
+        import math
+        import os
+        import random
+        from datetime import datetime
+
+        city: str = req.get("city", "Bengaluru")
+        area: str = req.get("area", "Whitefield")
+        disruption_type: str = req.get("disruption_type", "flood")
+        radius_km: float = float(req.get("radius_km", 8.0))  # 8km radius
+
+        # ── Known area center coordinates ──────────────────────────────
+        AREA_CENTERS: Dict[str, Dict[str, float]] = {
+            # Bengaluru
+            "Whitefield":       {"lat": 12.9698, "lon": 77.7500},
+            "BTM":              {"lat": 12.9166, "lon": 77.6101},
+            "Electronic City":  {"lat": 12.8399, "lon": 77.6770},
+            # Chennai
+            "OMR":              {"lat": 12.9121, "lon": 80.2273},
+            "Velachery":        {"lat": 12.9746, "lon": 80.2209},
+            "Tambaram":         {"lat": 12.9249, "lon": 80.1000},
+            # Mumbai
+            "Bandra":           {"lat": 19.0596, "lon": 72.8295},
+            "Andheri":          {"lat": 19.1136, "lon": 72.8697},
+            "Dadar":            {"lat": 19.0178, "lon": 72.8478},
+            # Hyderabad
+            "Gachibowli":       {"lat": 17.4400, "lon": 78.3489},
+            "Hitech City":      {"lat": 17.4474, "lon": 78.3762},
+            "Secunderabad":     {"lat": 17.4399, "lon": 78.4983},
+            # Delhi
+            "Rohini":           {"lat": 28.7041, "lon": 77.1025},
+            "Dwarka":           {"lat": 28.5921, "lon": 77.0460},
+            "Connaught Place":  {"lat": 28.6315, "lon": 77.2167},
+            # Kolkata
+            "Salt Lake":        {"lat": 22.5726, "lon": 88.4183},
+            "Howrah":           {"lat": 22.5855, "lon": 88.3522},
+            "Park Street":      {"lat": 22.5514, "lon": 88.3512},
+            # Pune
+            "Hinjewadi":        {"lat": 18.5912, "lon": 73.7389},
+            "Kothrud":          {"lat": 18.5074, "lon": 73.8077},
+            "Viman Nagar":      {"lat": 18.5679, "lon": 73.9143},
+            # Ahmedabad
+            "Navrangpura":      {"lat": 23.0258, "lon": 72.5640},
+            "SG Highway":       {"lat": 23.0258, "lon": 72.5000},
+            "Maninagar":        {"lat": 22.9866, "lon": 72.6044},
+            # Mumbai (additional)
+            "Bhandup":          {"lat": 19.1522, "lon": 72.9425},
+            "Thane":            {"lat": 19.2183, "lon": 72.9781},
+        }
+
+        # ── Disruption parameter overrides ──────────────────────────────
+        # NOTE: cooling_period_completed and premium_paid are intentionally
+        # NOT overridden — we use the real DB values so only genuinely
+        # eligible workers (who paid premiums and completed cooling) get payouts.
+        DISRUPTION_OVERRIDES: Dict[str, Dict[str, Any]] = {
+            "flood": {
+                "rainfall_cm": random.uniform(18, 28),
+                "disruption_type": "Heavy_Rain",
+                "disruption_duration_hours": random.uniform(6, 12),
+                "cyclone_alert_level": 0,
+                "temperature_extreme": random.uniform(26, 32),
+            },
+            "cyclone": {
+                "rainfall_cm": random.uniform(22, 35),
+                "disruption_type": "Cyclone",
+                "disruption_duration_hours": random.uniform(8, 18),
+                "cyclone_alert_level": 2,
+                "temperature_extreme": random.uniform(24, 30),
+            },
+            "strike": {
+                "rainfall_cm": random.uniform(0, 5),
+                "disruption_type": "Strike",
+                "disruption_duration_hours": random.uniform(4, 10),
+                "cyclone_alert_level": 0,
+                "temperature_extreme": random.uniform(28, 36),
+            },
+            "protest": {
+                "rainfall_cm": random.uniform(0, 8),
+                "disruption_type": "Protest",
+                "disruption_duration_hours": random.uniform(3, 8),
+                "cyclone_alert_level": 0,
+                "temperature_extreme": random.uniform(28, 36),
+            },
+            "curfew": {
+                "rainfall_cm": random.uniform(0, 5),
+                "disruption_type": "Curfew",
+                "disruption_duration_hours": random.uniform(8, 14),
+                "cyclone_alert_level": 0,
+                "temperature_extreme": random.uniform(28, 36),
+            },
+        }
+
+        # ── Mock news headlines ──────────────────────────────────────────
+        MOCK_HEADLINES = {
+            "flood": f"IMD red alert: Severe waterlogging reported across {area}, {city}. Deliveries severely impacted.",
+            "cyclone": f"Cyclone warning: High wind speeds and heavy rain batter {area}, {city}. Operations suspended.",
+            "strike": f"Transport strike disrupts gig worker operations across {area}, {city}. Roads blocked.",
+            "protest": f"Mass protest blocks arterial roads in {area}, {city}. Logistics routes severely disrupted.",
+            "curfew": f"Section 144 imposed in {area}, {city}. Night curfew restricts worker movement.",
+        }
+
+        if not classic_orchestrator:
+            raise HTTPException(
+                status_code=503,
+                detail="Classic orchestrator offline. Cannot run simulation.",
+            )
+
+        area_center = AREA_CENTERS.get(area)
+        if not area_center:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown area '{area}'. Valid areas: {list(AREA_CENTERS.keys())}",
+            )
+
+        overrides = DISRUPTION_OVERRIDES.get(disruption_type, DISRUPTION_OVERRIDES["flood"])
+        headline = MOCK_HEADLINES.get(disruption_type, f"Disruption detected in {area}, {city}.")
+
+        # ── Haversine distance function ──────────────────────────────────
+        def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+            R = 6371.0
+            phi1, phi2 = math.radians(lat1), math.radians(lat2)
+            dphi = math.radians(lat2 - lat1)
+            dlam = math.radians(lon2 - lon1)
+            a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlam / 2) ** 2
+            return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+        # ── Fetch workers from Supabase ──────────────────────────────────
+        try:
+            supabase_url = os.getenv("SUPABASE_URL", "")
+            supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+            if not supabase_url or not supabase_key:
+                raise HTTPException(status_code=503, detail="Supabase not configured.")
+
+            from supabase import create_client
+            sb = create_client(supabase_url, supabase_key)
+
+            # Fetch workers filtered by city (case-insensitive substring in record JSONB)
+            response = sb.table("gigshield_workers").select("record").execute()
+            all_workers_raw = response.data or []
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.exception("simulate_disruption: Supabase fetch failed")
+            raise HTTPException(status_code=500, detail=f"Supabase error: {e}")
+
+        # Normalize city string for matching
+        city_lower = city.lower().strip()
+        CITY_ALIASES = {
+            "bengaluru": ["bengaluru", "bangalore"],
+            "chennai": ["chennai"],
+            "mumbai": ["mumbai"],
+            "hyderabad": ["hyderabad"],
+            "delhi": ["delhi", "new delhi"],
+            "kolkata": ["kolkata", "calcutta"],
+            "pune": ["pune"],
+            "ahmedabad": ["ahmedabad"],
+        }
+        city_variants = next(
+            (v for k, v in CITY_ALIASES.items() if city_lower in k or city_lower in v),
+            [city_lower],
+        )
+
+        # ── Geo-filter by outlet_lat/lon within radius ───────────────────
+        center_lat = area_center["lat"]
+        center_lon = area_center["lon"]
+
+        matched_workers: List[Dict[str, Any]] = []
+        for row in all_workers_raw:
+            rec = row.get("record", {})
+            if not isinstance(rec, dict):
+                continue
+            rec_city = str(rec.get("city", "")).lower().strip()
+            if not any(v in rec_city for v in city_variants):
+                continue
+            try:
+                o_lat = float(rec.get("outlet_lat") or rec.get("worker_lat") or 0)
+                o_lon = float(rec.get("outlet_lon") or rec.get("worker_lon") or 0)
+            except (TypeError, ValueError):
+                continue
+            if o_lat == 0 and o_lon == 0:
+                continue
+            dist = haversine_km(center_lat, center_lon, o_lat, o_lon)
+            if dist <= radius_km:
+                matched_workers.append(rec)
+
+        # Fallback: if no geo-matches, take all city workers (capped at 20)
+        # This happens when outlet coordinates in DB are spread across the city
+        # beyond the selected radius — still a valid city-wide sample.
+        geo_matched = len(matched_workers) > 0
+        if not matched_workers:
+            logger.info("No workers within %skm of %s/%s. Sampling from city.", radius_km, city, area)
+            for row in all_workers_raw:
+                rec = row.get("record", {})
+                if not isinstance(rec, dict):
+                    continue
+                rec_city = str(rec.get("city", "")).lower().strip()
+                if any(v in rec_city for v in city_variants):
+                    matched_workers.append(rec)
+            matched_workers = matched_workers[:20]
+
+        if not matched_workers:
+            return {
+                "city": city,
+                "area": area,
+                "disruption_type": disruption_type,
+                "total_workers_in_area": 0,
+                "workers_eligible_for_payout": 0,
+                "total_simulated_payout": 0.0,
+                "total_premium_from_affected": 0.0,
+                "net_forecast_margin": 0.0,
+                "worker_results": [],
+                "mock_headline": headline,
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "fallback_used": False,
+            }
+
+        # ── Run classic orchestrator for each matched worker ─────────────
+        results_out: List[Dict[str, Any]] = []
+        total_payout = 0.0
+        total_premium = 0.0
+        eligible_count = 0
+
+        for rec in matched_workers:
+            try:
+                # Merge disruption overrides into the worker record
+                augmented = {**rec, **overrides}
+
+                # Simulate income loss from disruption (set to 20% of avg)
+                # cooling_period_completed and premium_paid use REAL DB values
+                # so only genuinely eligible workers receive payouts
+                avg_income = float(rec.get("avg_52week_income") or rec.get("weekly_income") or 7500.0)
+                augmented["weekly_income"] = avg_income * 0.20   # 80% income loss due to disruption
+                augmented["avg_52week_income"] = avg_income
+                augmented.setdefault("worker_id", rec.get("worker_id", 0))
+                augmented.setdefault("city", city)
+
+                worker_df = pd.DataFrame([augmented])
+                wf = await classic_orchestrator.process_claim(worker_df, city=city)
+
+                payout = float(getattr(wf, "payout_amount", 0) or 0)
+                decision = getattr(wf, "decision", "REJECTED")
+                premium = float(rec.get("premium_amount", 0) or 0)
+                total_premium += premium
+
+                if payout > 0:
+                    eligible_count += 1
+                    total_payout += payout
+
+                results_out.append({
+                    "worker_id": rec.get("worker_id"),
+                    "decision": decision,
+                    "payout_amount": payout,
+                    "premium_amount": premium,
+                    "distance_km": haversine_km(
+                        center_lat, center_lon,
+                        float(rec.get("outlet_lat") or 0),
+                        float(rec.get("outlet_lon") or 0),
+                    ),
+                })
+            except Exception as e:
+                logger.warning("Worker %s simulation error: %s", rec.get("worker_id"), e)
+                continue
+
+        net_margin = total_premium - total_payout
+
+        return {
+            "city": city,
+            "area": area,
+            "disruption_type": disruption_type,
+            "radius_km": radius_km,
+            "total_workers_in_area": len(matched_workers),
+            "workers_eligible_for_payout": eligible_count,
+            "total_simulated_payout": round(total_payout, 2),
+            "total_premium_from_affected": round(total_premium, 2),
+            "net_forecast_margin": round(net_margin, 2),
+            "worker_results": results_out,
+            "mock_headline": headline,
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "geo_matched": geo_matched,
+        }
+
     return application
 
 
