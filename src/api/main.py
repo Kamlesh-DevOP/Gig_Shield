@@ -11,7 +11,7 @@ Partner mock APIs (weather/news/telecom/...) are mounted at /partner-mock (e.g. 
 """
 
 from __future__ import annotations
-
+import razorpay
 import asyncio
 import logging
 import os
@@ -29,7 +29,10 @@ from src.api.schemas import (
     EvaluateWorkerRequest,
     InferencePredictRequest,
     OrchestrateBatchRequest,
+    OrchestrateBatchRequest,
     RAGRetrieveRequest,
+    RazorpayOrderRequest,
+    RazorpayOrderResponse,
 )
 from src.api.shift_schemas import (
     ShiftStartRequest,
@@ -207,6 +210,11 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+    )
+
+    # Initialize Razorpay Client
+    razorpay_client = razorpay.Client(
+        auth=(os.getenv("RAZORPAY_TEST_KEY_ID"), os.getenv("RAZORPAY_TEST_KEY_SECRET"))
     )
 
     # Optional: mount local partner mock under /partner-mock
@@ -678,6 +686,49 @@ def create_app() -> FastAPI:
         except Exception as e:
             logger.exception("dynamic_risk_profile")
             raise HTTPException(status_code=500, detail=str(e)) from e
+
+    # ───────────────────────────────────────────────────────────────────
+    # Razorpay Payment Endpoints
+    # ───────────────────────────────────────────────────────────────────
+
+    @application.post("/api/payment/create-order", tags=["Payment"], response_model=RazorpayOrderResponse)
+    async def create_payment_order(req: RazorpayOrderRequest):
+        try:
+            # Razorpay expects amount in paise (multiply by 100)
+            order_data = {
+                "amount": int(req.amount * 100),
+                "currency": req.currency,
+                "receipt": req.receipt or f"receipt_{os.urandom(4).hex()}",
+                "payment_capture": 1
+            }
+            order = razorpay_client.order.create(data=order_data)
+            return RazorpayOrderResponse(
+                id=order['id'],
+                amount=order['amount'],
+                currency=order['currency'],
+                receipt=order.get('receipt'),
+                status=order['status']
+            )
+        except Exception as e:
+            logger.exception("create_payment_order")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @application.post("/api/payment/verify", tags=["Payment"])
+    async def verify_payment(req: dict):
+        """
+        Expects:
+        {
+          "razorpay_order_id": "...",
+          "razorpay_payment_id": "...",
+          "razorpay_signature": "..."
+        }
+        """
+        try:
+            razorpay_client.utility.verify_payment_signature(req)
+            return {"status": "success", "message": "Payment verified successfully"}
+        except Exception:
+            logger.warning("Payment verification failed for order: %s", req.get("razorpay_order_id"))
+            raise HTTPException(status_code=400, detail="Invalid payment signature")
 
     return application
 

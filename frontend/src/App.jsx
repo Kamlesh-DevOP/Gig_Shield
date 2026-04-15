@@ -1,5 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import {
+  BrowserRouter, Routes, Route, Navigate, useNavigate, useParams
+} from "react-router-dom";
+import {
   Shield, Zap, Gem, LogIn, ChevronRight, AlertTriangle,
   CloudRain, TrendingDown, CheckCircle, Clock,
   MapPin, Activity, Lock, CreditCard, Smartphone, Building2,
@@ -15,7 +18,7 @@ import './index.css';
 
 // ─── RICH MOCK DATA ───────────────────────────────────────────────────────────
 // All three partners: Slab 3 (Premium, 100% cover, 4% rate)
-// avg = ₹8,000 → base premium = 8000 × 4% = ₹320
+// avg = ₹8,000 → base premium = 8001 × 4% = ₹320
 // currentEarning = ₹4,500, threshold = ₹6,000, loss = ₹1,500, rain = 15cm → 80%
 //
 // Z001 — Eg1: Normal       → premium ₹320, payout ₹1,200
@@ -84,7 +87,7 @@ const PARTNERS = {
 };
 
 // ─── TIER / PLAN DEFINITIONS ─────────────────────────────────────────────────
-// Slab 3 = Premium: 4% rate, 100% cover → 8000 × 4% = ₹320 base premium ✓
+// Slab 3 = Premium: 4% rate, 100% cover → 8001 × 4% = ₹320 base premium ✓
 const TIERS = {
   basic: { key: "basic", label: "Basic", tabLabel: "SLAB 1", rate: 0.036, cover: 0.50, accent: "#7E3DB5", accentPale: "rgba(126,61,181,0.08)" },
   standard: { key: "standard", label: "Standard", tabLabel: "SLAB 2", rate: 0.040, cover: 0.75, accent: "#5B21B6", accentPale: "rgba(91,33,182,0.09)" },
@@ -105,17 +108,20 @@ function getRainCoveragePct(cm) {
   return 0.95;
 }
 
-function computePricing(partner) {
+function computePricing(partner, overridePlanKey) {
   const avg = Math.round(partner.pastWeeklyEarnings.reduce((a, b) => a + b, 0) / partner.pastWeeklyEarnings.length);
   // For new customers, null entries in pastWeeklyPaid are not counted as defaults
   const defaults = partner.pastWeeklyPaid.filter(p => p === false).length;
   const claims = partner.pastWeeklyClaimed.filter(c => c).length;
-  const tier = getTier(partner.chosenPlan);
+
+  const currentPlanKey = overridePlanKey || partner.chosenPlan;
+  const tier = TIERS[currentPlanKey] || TIERS.premium;
+
   const isNewCustomer = !!partner.isNewCustomer;
 
   // ── Premium ──────────────────────────────────────────────────────────────
   // Base rate 4% shown across all slabs as common base
-  // Slab 3 (Premium) actual rate = 4.8% → 8000 × 4.8% = ₹384
+  // Slab 3 (Premium) actual rate = 4.8% → 8001 × 4.8% = ₹384
   const BASE_RATE = 0.04;
   const basePremium = Math.round(avg * BASE_RATE);          // ₹320 — shown as "4% base"
   const planPremium = Math.round(avg * tier.rate);          // ₹384 — Slab 3 at 4.8%
@@ -141,7 +147,7 @@ function computePricing(partner) {
   const adjCoverPct = tier.cover; // 100% for Slab 3
 
   // ── Income / loss ────────────────────────────────────────────────────────
-  const threshold = Math.round(avg * 0.75);   // 75% of 8000 = ₹6,000 ✓
+  const threshold = Math.round(avg * 0.75);   // 75% of 8001 = ₹6,000 ✓
   const currentEarning = partner.currentWeekDays.reduce((a, d) => a + d.earning, 0); // ₹4,500 ✓
   const loss = Math.max(0, threshold - currentEarning);               // ₹1,500 ✓
 
@@ -175,7 +181,7 @@ function computePricing(partner) {
   // Eg3: 1695 × 0.80 × 1.00 = ₹1,356 ✓
 
   const nextAvg = Math.round([...partner.pastWeeklyEarnings.slice(1), currentEarning].reduce((a, b) => a + b, 0) / 10);
-  const nextTier = getTier(partner.chosenPlan);
+  const nextTier = tier; // Use the same tier (current or overridden) for next week's preview
   const nextBasePremium = Math.round(nextAvg * BASE_RATE);
   const nextPlanPremium = Math.round(nextAvg * tier.rate);
   const nextLoyaltyAmt = isNonDefaulter ? Math.round(nextBasePremium * 0.13125) : 0;
@@ -225,11 +231,14 @@ const Header = ({ partner, onLogout }) => (
 );
 
 // ─── LOGIN ───────────────────────────────────────────────────────────────────
-function LoginPage({ onLogin, onRegister }) {
+function LoginPage({ onLogin }) {
+  const navigate = useNavigate();
   const [workerId, setWorkerId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const onRegister = () => navigate("/register");
 
   const handle = async () => {
     setError("");
@@ -464,10 +473,17 @@ function EarningsChart({ partner, pricing }) {
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({ partnerId, evaluation, evalLoading, onSelectPlan, onViewClaim, onPayPremium, onLogout, onSimulate }) {
+function Dashboard({ partnerId, evaluation, evalLoading, onLogout }) {
+  const navigate = useNavigate();
   const partner = PARTNERS[partnerId];
+  if (!partner) return null;
   const pricing = useMemo(() => computePricing(partner), [partner]);
   const tier = pricing.tier;
+
+  const onSelectPlan = () => navigate("/plans");
+  const onViewClaim = () => navigate("/claim");
+  const onPayPremium = () => navigate("/plans");
+  const onSimulate = () => navigate("/simulation");
 
   const hasPayout = evaluation?.decision === "APPROVE" || (evaluation?.payout_amount > 0);
 
@@ -630,10 +646,15 @@ function Dashboard({ partnerId, evaluation, evalLoading, onSelectPlan, onViewCla
 }
 
 // ─── PLAN SELECTOR ────────────────────────────────────────────────────────────
-function PlanSelector({ partnerId, onBack, onPay }) {
+function PlanSelector({ partnerId }) {
+  const navigate = useNavigate();
   const partner = PARTNERS[partnerId];
-  const pricing = useMemo(() => computePricing(partner), [partner]);
-  const [selected, setSelected] = useState(pricing.tier.key);
+  if (!partner) return null;
+  const [selected, setSelected] = useState(partner.chosenPlan);
+  const pricing = useMemo(() => computePricing(partner, selected), [partner, selected]);
+
+  const onBack = () => navigate("/dashboard");
+  const onPay = (k) => navigate(`/payment/${k}`);
 
   const planMeta = [
     { key: "basic", Icon: Shield },
@@ -703,10 +724,10 @@ function PlanSelector({ partnerId, onBack, onPay }) {
         {planMeta.map(({ key, Icon }) => {
           const t = TIERS[key];
           // Plan cards show next week's premium (updated rolling avg after this week's lower earning)
-          const nextLoyalty = pricing.isNonDefaulter ? Math.round(Math.round(pricing.nextAvg * 0.04) * 0.13125) : 0;
-          const premium = Math.round(pricing.nextAvg * t.rate) + pricing.defaultPenaltyAmt - nextLoyalty;
+          const tempPricing = computePricing(partner, key);
+          const premium = tempPricing.nextPremium;
           const isSelected = selected === key;
-          const isCurrent = pricing.tier.key === key;
+          const isCurrent = partner.chosenPlan === key;
           const tabClass = isCurrent ? "plan-tab tab-current" : isSelected ? "plan-tab tab-active" : "plan-tab";
           return (
             <div key={key} className="plan-slot" onClick={() => setSelected(key)}>
@@ -754,13 +775,19 @@ function PlanSelector({ partnerId, onBack, onPay }) {
 }
 
 // ─── PAYMENT PAGE ─────────────────────────────────────────────────────────────
-function PaymentPage({ partnerId, planKey, onBack, onSuccess }) {
+function PaymentPage({ partnerId }) {
+  const navigate = useNavigate();
+  const { planKey } = useParams();
   const partner = PARTNERS[partnerId];
-  const pricing = useMemo(() => computePricing(partner), [partner]);
-  const tier = TIERS[planKey];
+  if (!partner) return null;
+  const pricing = useMemo(() => computePricing(partner, planKey), [partner, planKey]);
+  const tier = pricing.tier;
   const premium = pricing.nextPremium;
   const [method, setMethod] = useState("UPI");
   const [loading, setLoading] = useState(false);
+
+  const onBack = () => navigate("/plans");
+  const onSuccess = () => navigate(`/success/${planKey}`);
 
   const methods = [
     { id: "UPI", icon: <Smartphone size={14} />, label: "UPI" },
@@ -768,6 +795,68 @@ function PaymentPage({ partnerId, planKey, onBack, onSuccess }) {
     { id: "Card", icon: <CreditCard size={14} />, label: "Debit Card" },
     { id: "Wallet", icon: <Wallet size={14} />, label: "Wallet" },
   ];
+
+  const handlePayment = async () => {
+    setLoading(true);
+    try {
+      // 1. Create Order on Backend
+      const orderRes = await fetch("http://localhost:8001/api/payment/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: premium,
+          receipt: `receipt_${partnerId}_${planKey}`
+        })
+      });
+      const orderData = await orderRes.json();
+
+      if (!orderData.id) throw new Error("Failed to create order");
+
+      // 2. Configure Razorpay Options
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_TEST_KEY_ID,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "Gig Insurance Company",
+        description: `${tier.label} Plan Subscription`,
+        order_id: orderData.id,
+        handler: async function (response) {
+          // 3. Verify Payment
+          try {
+            const verifyRes = await fetch("http://localhost:8001/api/payment/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(response)
+            });
+            const verifyData = await verifyRes.json();
+            if (verifyData.status === "success") {
+              onSuccess();
+            } else {
+              alert("Payment verification failed. Please contact support.");
+            }
+          } catch (vErr) {
+            console.error("Verification error", vErr);
+            alert("Payment verification failed.");
+          }
+        },
+        prefill: {
+          name: partner.name,
+          contact: partner.phone,
+        },
+        theme: { color: tier.accent },
+        modal: {
+          ondismiss: function() { setLoading(false); }
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      console.error("Payment failed", err);
+      alert("Payment failed: " + err.message);
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="center-pg">
@@ -801,23 +890,28 @@ function PaymentPage({ partnerId, planKey, onBack, onSuccess }) {
         </div>
         <button
           className="btn-accent"
-          onClick={() => { setLoading(true); setTimeout(() => { setLoading(false); onSuccess(); }, 1800); }}
+          onClick={handlePayment}
           disabled={loading}
         >
           {loading ? <span className="spin"><Radio size={16} /></span> : <><Lock size={15} /> Pay {fmt(premium)}</>}
         </button>
-        <div className="secure-note"><Lock size={11} /> Secured · Auto-trigger enabled on payment</div>
+        <div className="secure-note"><Lock size={11} /> Secured by Razorpay · Auto-trigger enabled</div>
       </div>
     </div>
   );
 }
 
 // ─── PAYMENT SUCCESS ──────────────────────────────────────────────────────────
-function PaymentSuccess({ partnerId, planKey, onDone }) {
+function PaymentSuccess({ partnerId }) {
+  const navigate = useNavigate();
+  const { planKey } = useParams();
   const partner = PARTNERS[partnerId];
-  const pricing = useMemo(() => computePricing(partner), [partner]);
-  const tier = TIERS[planKey];
+  if (!partner) return null;
+  const pricing = useMemo(() => computePricing(partner, planKey), [partner, planKey]);
+  const tier = pricing.tier;
   const premium = pricing.nextPremium;
+
+  const onDone = () => navigate("/dashboard");
   return (
     <div className="center-pg">
       <div className="pay-card" style={{ textAlign: "center", maxWidth: 400 }}>
@@ -841,10 +935,15 @@ function PaymentSuccess({ partnerId, planKey, onDone }) {
 }
 
 // ─── RICH CLAIM DETAIL VIEW ───────────────────────────────────────────────────
-function ClaimDetailView({ partnerId, evaluation, evalLoading, onBack, onPayPremium }) {
+function ClaimDetailView({ partnerId, evaluation, evalLoading }) {
+  const navigate = useNavigate();
   const partner = PARTNERS[partnerId];
+  if (!partner) return null;
   const pricing = useMemo(() => computePricing(partner), [partner]);
   const p = pricing;
+
+  const onBack = () => navigate("/dashboard");
+  const onPayPremium = () => navigate("/plans");
 
   return (
     <div className="claim-page">
@@ -1100,20 +1199,47 @@ function ClaimDetailView({ partnerId, evaluation, evalLoading, onBack, onPayPrem
   );
 }
 
-// ─── APP ─────────────────────────────────────────────────────────────────────
-export default function App() {
-  const [screen, setScreen] = useState("login");
-  const [partnerId, setPartnerId] = useState(null);
-  const [selectedPlan, setSelectedPlan] = useState(null);
+// ─── PRIVATE ROUTE ────────────────────────────────────────────────────────────
+function PrivateRoute({ children, partnerId }) {
+  return partnerId ? children : <Navigate to="/" replace />;
+}
+
+// ─── APP CONTENT ─────────────────────────────────────────────────────────────
+function AppContent() {
+  const navigate = useNavigate();
+  const [partnerId, setPartnerId] = useState(() => {
+    const id = localStorage.getItem("gic_partner_id");
+    // Critical: Restore data BEFORE the first render to prevent crashes in protected routes
+    if (id && id.startsWith("DB") && !PARTNERS[id]) {
+      const stored = localStorage.getItem(`gic_partner_data_${id}`);
+      if (stored) {
+        try {
+          PARTNERS[id] = JSON.parse(stored);
+        } catch (e) {
+          console.error("Failed to restore partner data", e);
+        }
+      }
+    }
+    return id;
+  });
   const [evaluation, setEvaluation] = useState(null);
   const [evalLoading, setEvalLoading] = useState(false);
 
-  // Call the REAL backend evaluation API whenever use logs in
+  // Sync partnerId changes to localStorage
+  useEffect(() => {
+    if (partnerId) {
+      localStorage.setItem("gic_partner_id", partnerId);
+    } else {
+      localStorage.removeItem("gic_partner_id");
+    }
+  }, [partnerId]);
+
+  // Call the REAL backend evaluation API whenever user is logged in
   useEffect(() => {
     if (partnerId && PARTNERS[partnerId]?.dbRecord) {
       setEvalLoading(true);
       const partner = PARTNERS[partnerId];
-      fetch("http://localhost:8000/api/evaluate_worker", {
+      fetch("http://localhost:8001/api/evaluate_worker", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1135,67 +1261,93 @@ export default function App() {
     }
   }, [partnerId]);
 
+  const handleLogin = (id) => {
+    setPartnerId(id);
+    // Persist dynamic partner data if applicable
+    if (id.startsWith("DB") && PARTNERS[id]) {
+      localStorage.setItem(`gic_partner_data_${id}`, JSON.stringify(PARTNERS[id]));
+    }
+    navigate("/dashboard");
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("gic_partner_id");
+    if (partnerId && partnerId.startsWith("DB")) {
+      localStorage.removeItem(`gic_partner_data_${partnerId}`);
+    }
+    setPartnerId(null);
+    navigate("/");
+  };
+
   return (
     <div className="zgi">
-      {screen === "login" && (
-        <LoginPage
-          onLogin={id => { setPartnerId(id); setScreen("dashboard"); }}
-          onRegister={() => setScreen("onboarding")}
-        />
-      )}
-      {screen === "onboarding" && (
-        <OnboardingPage onBack={() => setScreen("login")} />
-      )}
-      {screen === "dashboard" && partnerId && (
-        <Dashboard
-          partnerId={partnerId}
-          evaluation={evaluation}
-          evalLoading={evalLoading}
-          onSelectPlan={() => setScreen("plans")}
-          onViewClaim={() => setScreen("claim")}
-          onPayPremium={() => setScreen("plans")}
-          onSimulate={() => setScreen("simulation")}
-          onLogout={() => { setPartnerId(null); setScreen("login"); }}
-        />
-      )}
-      {screen === "plans" && partnerId && (
-        <PlanSelector
-          partnerId={partnerId}
-          onBack={() => setScreen("dashboard")}
-          onPay={k => { setSelectedPlan(k); setScreen("payment"); }}
-        />
-      )}
-      {screen === "payment" && selectedPlan && (
-        <PaymentPage
-          partnerId={partnerId}
-          planKey={selectedPlan}
-          onBack={() => setScreen("plans")}
-          onSuccess={() => setScreen("paySuccess")}
-        />
-      )}
-      {screen === "paySuccess" && selectedPlan && (
-        <PaymentSuccess
-          partnerId={partnerId}
-          planKey={selectedPlan}
-          onDone={() => setScreen("dashboard")}
-        />
-      )}
-      {screen === "claim" && partnerId && (
-        <ClaimDetailView
-          partnerId={partnerId}
-          evaluation={evaluation}
-          evalLoading={evalLoading}
-          onBack={() => setScreen("dashboard")}
-          onPayPremium={() => setScreen("plans")}
-        />
-      )}
-      {screen === "simulation" && partnerId && (
-        <SimulationPage
-          partnerId={partnerId}
-          partnerData={PARTNERS[partnerId]}
-          onBack={() => setScreen("dashboard")}
-        />
-      )}
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<LoginPage onLogin={handleLogin} />} />
+        <Route path="/register" element={<OnboardingPage onBack={() => navigate("/")} />} />
+
+        {/* Protected Routes */}
+        <Route path="/dashboard" element={
+          <PrivateRoute partnerId={partnerId}>
+            <Dashboard
+              partnerId={partnerId}
+              evaluation={evaluation}
+              evalLoading={evalLoading}
+              onLogout={handleLogout}
+            />
+          </PrivateRoute>
+        } />
+
+        <Route path="/plans" element={
+          <PrivateRoute partnerId={partnerId}>
+            <PlanSelector partnerId={partnerId} />
+          </PrivateRoute>
+        } />
+
+        <Route path="/payment/:planKey" element={
+          <PrivateRoute partnerId={partnerId}>
+            <PaymentPage partnerId={partnerId} />
+          </PrivateRoute>
+        } />
+
+        <Route path="/success/:planKey" element={
+          <PrivateRoute partnerId={partnerId}>
+            <PaymentSuccess partnerId={partnerId} />
+          </PrivateRoute>
+        } />
+
+        <Route path="/claim" element={
+          <PrivateRoute partnerId={partnerId}>
+            <ClaimDetailView
+              partnerId={partnerId}
+              evaluation={evaluation}
+              evalLoading={evalLoading}
+            />
+          </PrivateRoute>
+        } />
+
+        <Route path="/simulation" element={
+          <PrivateRoute partnerId={partnerId}>
+            <SimulationPage
+              partnerId={partnerId}
+              partnerData={PARTNERS[partnerId]}
+              onBack={() => navigate("/dashboard")}
+            />
+          </PrivateRoute>
+        } />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to={partnerId ? "/dashboard" : "/"} replace />} />
+      </Routes>
     </div>
+  );
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
   );
 }

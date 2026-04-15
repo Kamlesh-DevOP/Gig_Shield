@@ -78,3 +78,17 @@ class RAGRetrieveRequest(BaseModel):
     query: str
     categories: Optional[List[str]] = None
     top_k: Optional[int] = None
+
+
+class RazorpayOrderRequest(BaseModel):
+    amount: float
+    currency: str = "INR"
+    receipt: Optional[str] = None
+
+
+class RazorpayOrderResponse(BaseModel):
+    id: str
+    amount: int
+    currency: str
+    receipt: Optional[str] = None
+    status: str
