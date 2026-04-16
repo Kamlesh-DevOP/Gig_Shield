@@ -176,7 +176,7 @@ export default function B2BPartnerPortal({ onBack }) {
                                         <em>Automatically.</em>
                                     </h2>
                                     <p className="b2b-hero-desc">
-                                        Zepto, Blinkit, Swiggy and other platforms plug into GIC's parametric insurance engine via API. Workers are covered the moment they log in. Claims pay out automatically when disruption hits — no forms, no delays.
+                                        Zepto, Blinkit, Swiggy Instamart and other platforms plug into GIC's parametric insurance engine via API. Workers are covered the moment they log in. Claims pay out automatically when disruption hits — no forms, no delays.
                                     </p>
                                     <div className="b2b-hero-btns">
                                         <button className="b2b-cta-primary" onClick={() => setShowWizard(true)}>
@@ -274,7 +274,7 @@ export default function B2BPartnerPortal({ onBack }) {
                             <div className="b2b-partners">
                                 <div className="b2b-partners-label">Designed for India's top quick-commerce & delivery platforms</div>
                                 <div className="b2b-partner-logos">
-                                    {["Zepto", "Blinkit", "Swiggy", "Zomato", "BigBasket", "Dunzo"].map(name => (
+                                    {["Zepto", "Blinkit", "Instamart"].map(name => (
                                         <div key={name} className="b2b-partner-pill">{name}</div>
                                     ))}
                                 </div>

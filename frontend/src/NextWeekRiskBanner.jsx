@@ -105,7 +105,7 @@ export default function NextWeekRiskBanner({ partner, pricing, onPayPremium }) {
                 <button
                     onClick={onPayPremium}
                     style={{
-                        background: "var(--purple)", color: "#fff", border: "none",
+                        background: "var(--purple)", color: "var(--text-on-primary)", border: "none",
                         borderRadius: 9, padding: "9px 16px", cursor: "pointer",
                         fontFamily: "var(--font)", fontSize: 12, fontWeight: 700,
                         display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap",

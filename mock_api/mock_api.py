@@ -260,7 +260,7 @@ def platform(city: Optional[str] = None, limit: int = 10):
         error_rate = random.randint(0, 100)
 
         incidents.append({
-            "platform": random.choice(["Swiggy", "Zomato", "Blinkit", "Zepto"]),
+            "platform": random.choice(["Instamart", "Blinkit", "Zepto"]),
             "region": random.choice(["North", "Central", "South"]),
             "city": random.choice(CITIES),
             "status": (

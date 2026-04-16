@@ -213,10 +213,10 @@ export default function WhatIfCalculator({ onBack }) {
                             background: "linear-gradient(135deg,#2D0A4E,#5B21B6)",
                             borderRadius: 16, padding: "22px 24px",
                         }}>
-                            <div style={{ fontSize: 11, color: "#C4A8E0", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>
+                            <div style={{ fontSize: 11, color: "var(--text-on-primary-muted)", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>
                                 Weekly Premium Due
                             </div>
-                            <div style={{ fontSize: 38, fontWeight: 700, color: "#FAF8FF", fontFamily: "'IBM Plex Mono',monospace", letterSpacing: -1, marginBottom: 6 }}>
+                            <div style={{ fontSize: 38, fontWeight: 700, color: "var(--text-on-primary)", fontFamily: "'IBM Plex Mono',monospace", letterSpacing: -1, marginBottom: 6 }}>
                                 {fmt(calc.weeklyPremium)}
                             </div>
                             <div style={{ fontSize: 12, color: "rgba(196,168,224,0.85)", lineHeight: 1.6 }}>

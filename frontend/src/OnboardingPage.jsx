@@ -9,7 +9,7 @@ import { supabase } from "./supabaseClient";
 import Stepper from "./Stepper";
 
 // ── Platform options ────────────────────────────────────────────────────────
-const PLATFORMS = ["Blinkit", "Zepto", "Swiggy", "Zomato", "Dunzo", "BigBasket", "Other"];
+const PLATFORMS = ["Blinkit", "Zepto", "Instamart"];
 
 // ── Step indicator ──────────────────────────────────────────────────────────
 function StepDots({ step }) {

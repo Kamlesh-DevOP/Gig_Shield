@@ -43,7 +43,7 @@ export default function ProfileSettingsPage({ partner, onBack, onLogout }) {
       {/* ── Sidebar ── */}
       <aside style={{
         width: "280px",
-        background: "var(--surface)",
+        background: "var(--surface2)",
         borderRight: "1px solid var(--border)",
         display: "flex",
         flexDirection: "column",
@@ -83,7 +83,7 @@ export default function ProfileSettingsPage({ partner, onBack, onLogout }) {
               justifyContent: "center",
               fontSize: "18px",
               fontWeight: 600,
-              color: "white"
+              color: "var(--text-on-primary)"
             }}>
               {partner.avatar}
             </div>
@@ -106,8 +106,8 @@ export default function ProfileSettingsPage({ partner, onBack, onLogout }) {
                   borderRadius: "10px",
                   border: "none",
                   background: activeTab === Tab.id ? "var(--purple-pale)" : "transparent",
-                  color: activeTab === Tab.id ? "var(--purple)" : "var(--muted)",
-                  fontWeight: activeTab === Tab.id ? 500 : 400,
+                  color: activeTab === Tab.id ? "var(--purple-dark)" : "var(--muted)",
+                  fontWeight: activeTab === Tab.id ? 600 : 400,
                   fontSize: "14px",
                   cursor: "pointer",
                   transition: "all 0.2s",
@@ -260,7 +260,7 @@ export default function ProfileSettingsPage({ partner, onBack, onLogout }) {
                 borderRadius: "10px",
                 border: "none",
                 background: "var(--purple)",
-                color: "white",
+                color: "var(--text-on-primary)",
                 fontWeight: 500,
                 fontSize: "14px",
                 cursor: "pointer",
@@ -362,9 +362,8 @@ export default function ProfileSettingsPage({ partner, onBack, onLogout }) {
               <p style={{ color: "var(--muted)", fontSize: "14px" }}>Details about your current paramilitary protection plan.</p>
             </div>
 
-            <div style={{
-              background: "linear-gradient(135deg, #2D0A4E 0%, #3B0764 100%)",
-              color: "#fff",
+            <div className="premium-banner" style={{
+              color: "var(--text-on-dark-bg)",
               padding: "32px",
               borderRadius: "20px",
               position: "relative",
@@ -377,7 +376,7 @@ export default function ProfileSettingsPage({ partner, onBack, onLogout }) {
                   {getPlanDisplay()}
                 </div>
                 <div style={{ fontSize: "13px", opacity: 0.9, display: "flex", alignItems: "center", gap: "6px" }}>
-                  <BadgeCheck size={14} color="#C4A8E0" /> 100% Income Replacement Slab Active
+                  <BadgeCheck size={14} color="var(--text-on-primary-muted)" /> 100% Income Replacement Slab Active
                 </div>
               </div>
               <div style={{ position: "absolute", bottom: "-24px", right: "-24px", opacity: 0.08, zIndex: 0 }}>
@@ -483,7 +482,7 @@ export default function ProfileSettingsPage({ partner, onBack, onLogout }) {
                 borderRadius: "10px",
                 border: "none",
                 background: "var(--purple)",
-                color: "white",
+                color: "var(--text-on-primary)",
                 fontWeight: 500,
                 fontSize: "14px",
                 cursor: "pointer"

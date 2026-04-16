@@ -33,7 +33,7 @@ function AnimatedStat({ value, suffix = "", prefix = "", label, decimals = 0, de
     const formatted = decimals > 0 ? display.toFixed(decimals) : display.toLocaleString("en-IN");
     return (
         <div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "#C4A8E0", fontFamily: "'IBM Plex Mono',monospace", letterSpacing: -0.5 }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--text-on-primary-muted)", fontFamily: "'IBM Plex Mono',monospace", letterSpacing: -0.5 }}>
                 {prefix}{formatted}{suffix}
             </div>
             <div style={{ fontSize: 11, color: "rgba(250,248,255,0.45)", letterSpacing: 1, textTransform: "uppercase", marginTop: 2, fontWeight: 500 }}>
@@ -84,7 +84,7 @@ export function LivePayoutTicker() {
             }} />
             <span style={{ fontSize: 12, color: "rgba(250,248,255,0.7)" }}>
                 Last payout:{" "}
-                <strong style={{ color: "#C4A8E0" }}>{ev.amount}</strong>
+                <strong style={{ color: "var(--text-on-primary-muted)" }}>{ev.amount}</strong>
                 {" "}→ {ev.worker}, {ev.city} · {ev.time}
             </span>
         </div>
@@ -110,7 +110,7 @@ export function MarketStatsRow({ started = true }) {
             </div>
             {/* Platform partners */}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", position: "relative", zIndex: 1 }}>
-                {["Zepto", "Blinkit", "Swiggy", "Zomato", "BigBasket", "Dunzo"].map(p => (
+                {["Zepto", "Blinkit", "Instamart"].map(p => (
                     <span key={p} style={{
                         fontSize: 10, fontWeight: 600, padding: "3px 10px",
                         borderRadius: 20, background: "rgba(255,255,255,0.08)",

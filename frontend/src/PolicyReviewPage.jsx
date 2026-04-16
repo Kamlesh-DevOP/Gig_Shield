@@ -80,21 +80,21 @@ export default function PolicyReviewPage({ workerData, onConfirm, onBack }) {
             <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "20px" }}>
               <div style={{ color: "var(--purple-lt)" }}><Zap size={18} /></div>
               <div>
-                <div style={{ color: "#fff", fontSize: "14px", fontWeight: 600 }}>Zero Paperwork</div>
+                <div style={{ color: "var(--text-on-primary)", fontSize: "14px", fontWeight: 600 }}>Zero Paperwork</div>
                 <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "12px" }}>Payouts are triggered automatically by rainfall data.</div>
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", marginBottom: "20px" }}>
               <div style={{ color: "var(--purple-lt)" }}><Scale size={18} /></div>
               <div>
-                <div style={{ color: "#fff", fontSize: "14px", fontWeight: 600 }}>Parametric Fairness</div>
+                <div style={{ color: "var(--text-on-primary)", fontSize: "14px", fontWeight: 600 }}>Parametric Fairness</div>
                 <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "12px" }}>Fixed payouts based on verifiable weather thresholds.</div>
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
               <div style={{ color: "var(--purple-lt)" }}><Lock size={18} /></div>
               <div>
-                <div style={{ color: "#fff", fontSize: "14px", fontWeight: 600 }}>8-Week Cooling Period</div>
+                <div style={{ color: "var(--text-on-primary)", fontSize: "14px", fontWeight: 600 }}>8-Week Cooling Period</div>
                 <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "12px" }}>Standard wait time to prevent adverse selection.</div>
               </div>
             </div>

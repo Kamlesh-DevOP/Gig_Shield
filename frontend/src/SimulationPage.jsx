@@ -18,13 +18,13 @@ const normalizeDecision = (d) => isApproved(d) ? "APPROVE" : String(d || "REJECT
 // ── Simulation Step Pipeline ─────────────────────────────────────────────────
 
 const PIPELINE_STEPS = [
-  { key: "idle", label: "Ready", icon: Zap, color: "#7B6899" },
-  { key: "weather", label: "Environmental", icon: CloudRain, color: "#2563EB" },
-  { key: "market", label: "Market Intel", icon: Radio, color: "#6366F1" },
-  { key: "analyzing", label: "ML Inference", icon: Brain, color: "#7C3AED" },
-  { key: "eligibility", label: "Eligibility Check", icon: Scan, color: "#D97706" },
-  { key: "decision", label: "Decision", icon: ShieldCheck, color: "#059669" },
-  { key: "payout", label: "Payout", icon: Banknote, color: "#10B981" },
+  { key: "idle", label: "Ready", icon: Zap, color: "var(--pipe-ready, #7B6899)" },
+  { key: "weather", label: "Environmental", icon: CloudRain, color: "var(--pipe-env, #2563EB)" },
+  { key: "market", label: "Market Intel", icon: Radio, color: "var(--pipe-market, #6366F1)" },
+  { key: "analyzing", label: "ML Inference", icon: Brain, color: "var(--pipe-ml, #7C3AED)" },
+  { key: "eligibility", label: "Eligibility Check", icon: Scan, color: "var(--pipe-elig, #D97706)" },
+  { key: "decision", label: "Decision", icon: ShieldCheck, color: "var(--pipe-dec, #059669)" },
+  { key: "payout", label: "Payout", icon: Banknote, color: "var(--pipe-pay, #10B981)" },
 ];
 
 export default function SimulationPage({ partnerId, partnerData, onBack }) {
@@ -385,7 +385,7 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
             </div>
             <div className="sim-hero-visual">
               <div className={`sim-radar ${isRunning ? "active" : ""}`}>
-                <CloudRain size={32} color="#C4A8E0" />
+                <CloudRain size={32} color="var(--text-on-primary-muted)" />
                 <div className="radar-ring r1" />
                 <div className="radar-ring r2" />
                 <div className="radar-ring r3" />
@@ -530,7 +530,7 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
                   <div className="src-header">
                     <CloudRain size={15} color="#2563EB" />
                     <span>Weather Data — {weather.city}</span>
-                    <span className="src-badge" style={{ background: "#2563EB15", color: "#2563EB", borderColor: "#2563EB44" }}>
+                    <span className="src-badge" style={{ background: "var(--badge-bg, #2563EB15)", color: "var(--badge-text, #2563EB)", borderColor: "var(--badge-bdr, #2563EB44)" }}>
                       {weather.reports.length} stations
                     </span>
                   </div>
@@ -631,7 +631,7 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
                             <Icon size={12} color="#7C3AED" />
                             <span style={{ fontSize: 10, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.3px" }}>{label}</span>
                           </div>
-                          <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "var(--mono)", color: "#7C3AED" }}>{displayVal}</div>
+                          <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "var(--mono)", color: "var(--ml-num, #7C3AED)" }}>{displayVal}</div>
                         </div>
                       );
                     })}
@@ -767,7 +767,7 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
                               display: "flex", alignItems: "center", gap: 6,
                             }}>
                               <span style={{ color: "var(--muted)", fontWeight: 500 }}>{label}</span>
-                              <span style={{ fontWeight: 700, fontFamily: "var(--mono)", color: "#7C3AED" }}>{displayVal}</span>
+                              <span style={{ fontWeight: 700, fontFamily: "var(--mono)", color: "var(--ml-num, #7C3AED)" }}>{displayVal}</span>
                             </div>
                           );
                         })}

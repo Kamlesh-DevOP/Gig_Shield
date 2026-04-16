@@ -151,7 +151,7 @@ export default function PayoutSetupPage({ workerId, onComplete, onBack }) {
 
           <div style={{ marginTop: "50px" }}>
             <div style={{ display: "flex", gap: "16px", marginBottom: "24px" }}>
-              <div style={{ width: "42px", height: "42px", borderRadius: "12px", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#C4A8E0" }}>
+              <div style={{ width: "42px", height: "42px", borderRadius: "12px", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-on-primary-muted)" }}>
                 <Globe size={20} />
               </div>
               <div>
@@ -160,7 +160,7 @@ export default function PayoutSetupPage({ workerId, onComplete, onBack }) {
               </div>
             </div>
             <div style={{ display: "flex", gap: "16px", marginBottom: "24px" }}>
-              <div style={{ width: "42px", height: "42px", borderRadius: "12px", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#C4A8E0" }}>
+              <div style={{ width: "42px", height: "42px", borderRadius: "12px", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-on-primary-muted)" }}>
                 <Zap size={20} />
               </div>
               <div>

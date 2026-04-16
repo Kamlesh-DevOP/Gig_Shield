@@ -101,10 +101,34 @@ const PARTNERS = {
 // ─── TIER / PLAN DEFINITIONS ─────────────────────────────────────────────────
 // Slab 3 = Premium: 4% rate, 100% cover → 8001 × 4% = ₹320 base premium ✓
 const TIERS = {
-  basic: { key: "basic", label: "Basic", tabLabel: "SLAB 1", rate: 0.036, cover: 0.50, accent: "#7E3DB5", accentPale: "rgba(126,61,181,0.08)" },
-  standard: { key: "standard", label: "Standard", tabLabel: "SLAB 2", rate: 0.040, cover: 0.75, accent: "#5B21B6", accentPale: "rgba(91,33,182,0.09)" },
-  premium: { key: "premium", label: "Premium", tabLabel: "SLAB 3", rate: 0.048, cover: 1.00, accent: "#3B0764", accentPale: "rgba(59,7,100,0.09)" },
+  basic: { key: "basic", label: "Basic", tabLabel: "SLAB 1", rate: 0.036, cover: 0.50, accent: "var(--purple-lt)", accentPale: "var(--purple-pale)" },
+  standard: { key: "standard", label: "Standard", tabLabel: "SLAB 2", rate: 0.040, cover: 0.75, accent: "var(--purple-mid)", accentPale: "var(--purple-pale)" },
+  premium: { key: "premium", label: "Premium", tabLabel: "SLAB 3", rate: 0.048, cover: 1.00, accent: "var(--purple-dark)", accentPale: "var(--purple-pale)" },
 };
+
+// ─── DYNAMIC DATES (Global) ──────────────────────────────────────────────────
+const now = new Date();
+const day = now.getDay();
+const daysToMonday = day === 0 ? 1 : 8 - day;
+const cycleEnd = new Date(now);
+cycleEnd.setDate(now.getDate() + daysToMonday);
+
+const cycleStart = new Date(cycleEnd);
+cycleStart.setDate(cycleEnd.getDate() - 7);
+
+const nextCycleStart = new Date(cycleEnd);
+nextCycleStart.setDate(cycleEnd.getDate() + 1);
+
+const nextCycleEnd = new Date(nextCycleStart);
+nextCycleEnd.setDate(nextCycleStart.getDate() + 6);
+
+const fmtDateRange = (s, e) => {
+  const f = d => d.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
+  return `${s.getDate()}–${f(e)} ${e.getFullYear()}`;
+};
+
+const thisWeekStr = fmtDateRange(cycleStart, cycleEnd);
+const nextWeekStr = fmtDateRange(nextCycleStart, nextCycleEnd);
 
 // Tier comes from partner's chosen plan, not auto-assigned from avg
 function getTier(planKey) {
@@ -254,7 +278,7 @@ const Header = ({ partner, onLogout }) => {
         >
           <Settings size={16} />
         </button>
-        <button onClick={onLogout} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(126,61,181,0.15)", border: "1px solid #7E3DB5", color: "#3B0764", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", letterSpacing: 0.2 }}>
+        <button onClick={onLogout} style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--purple-pale)", border: "1px solid var(--purple)", color: "var(--purple-dark)", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", letterSpacing: 0.2 }}>
           <LogOut size={13} /> Logout
         </button>
       </div>
@@ -460,7 +484,7 @@ function LoginPage({ onLogin }) {
           </div>
 
           <div style={{ marginTop: 24, borderTop: "1px solid var(--border)", paddingTop: 20 }}>
-            <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12, textAlign: "center" }}>Are you a Platform Partner? (Zepto, Blinkit, Swiggy)</div>
+            <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12, textAlign: "center" }}>Are you a Platform Partner? (Zepto, Blinkit, Instamart)</div>
             <button className="btn-premium-outline" onClick={() => navigate("/b2b")} style={{ width: "100%" }}>
               <Building2 size={16} /> Partner Integration Portal
             </button>
@@ -491,9 +515,9 @@ function EarningsChart({ partner, pricing }) {
             <div className="bar-fill" style={{
               height: `${(w.val / max) * 68}px`,
               background: w.disrupted ? "rgba(185,28,28,0.45)"
-                : w.current ? "#6B2D8B"
-                  : "rgba(196,168,224,0.5)",
-              border: `1px solid ${w.disrupted ? "rgba(185,28,28,0.22)" : w.current ? "#6B2D8B" : "var(--border)"}`,
+                : w.current ? "var(--purple)"
+                  : "var(--purple-pale)",
+              border: `1px solid ${w.disrupted ? "rgba(185,28,28,0.22)" : w.current ? "var(--purple)" : "var(--purple-pale)"}`,
             }} />
             <div className="bar-label">{w.label}</div>
           </div>
@@ -580,7 +604,7 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout, paidForNextWe
               <AlertCircle size={24} />
             </div>
             <div className="alert-body">
-              <div className="alert-title" style={{ color: "var(--red)", fontSize: "16px", fontWeight: 700 }}>Action Required: Setup Payout Account</div>
+              <div className="alert-title" style={{ color: "var(--purple)", fontSize: "16px", fontWeight: 700 }}>Action Required: Setup Payout Account</div>
               <div className="alert-desc" style={{ fontSize: "14px", color: "var(--muted)", maxWidth: "600px" }}>
                 Your parametric insurance protection is currently <strong>Inactive</strong>. We cannot process automated claims until you provide your payout details for instant rollout.
               </div>
@@ -652,27 +676,16 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout, paidForNextWe
           <FraudScoreCard partner={partner} pricing={pricing} />
 
           {/* Premium Countdown (Dynamic) */}
-          <div className="card" style={{ background: "linear-gradient(135deg, #2D0A4E 0%, #3B0764 100%)", color: "white" }}>
+          <div className="card premium-banner" style={{ color: "var(--text-on-dark-bg)", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
             {(() => {
-              const now = new Date();
-              // Calculate days until next Monday (typical end of week)
-              const day = now.getDay(); // 0 (Sun) to 6 (Sat)
-              const daysToMonday = day === 0 ? 1 : 8 - day;
-              
-              // Mocking a 7-day cycle end date
-              const cycleEnd = new Date(now);
-              cycleEnd.setDate(now.getDate() + daysToMonday);
-              
-              const cycleStart = new Date(cycleEnd);
-              cycleStart.setDate(cycleEnd.getDate() - 7);
-
-              const fmtDate = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+              const fmtDate = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
               const daysLeft = daysToMonday;
               const dashOffset = (daysLeft / 7) * 125.6;
 
               return (
-                <>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px" }}>
+                <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between" }}>
+                  {/* Top item: Due Date Countdown */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "16px", borderBottom: "1px dashed rgba(255,255,255,0.2)" }}>
                     <div>
                       <div style={{ fontSize: "12px", opacity: 0.7, textTransform: "uppercase", letterSpacing: "1px" }}>Next Premium Due</div>
                       <div style={{ fontSize: "28px", fontWeight: 700 }}>{daysLeft} {daysLeft === 1 ? "Day" : "Days"}</div>
@@ -680,7 +693,7 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout, paidForNextWe
                     <div style={{ width: "50px", height: "50px" }}>
                       <svg width="50" height="50" viewBox="0 0 50 50">
                          <circle cx="25" cy="25" r="20" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="4" />
-                         <circle cx="25" cy="25" r="20" fill="none" stroke={daysLeft <= 2 ? "#EF4444" : "#A78BFA"} strokeWidth="4" 
+                         <circle cx="25" cy="25" r="20" fill="none" stroke={daysLeft <= 2 ? "#EF4444" : "var(--text-on-dark-bg)"} strokeWidth="4"
                            strokeDasharray={`${dashOffset} 125.6`}
                            strokeLinecap="round"
                            transform="rotate(-90 25 25)"
@@ -688,20 +701,27 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout, paidForNextWe
                       </svg>
                     </div>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+
+                  {/* Middle item: Coverage & Premium Amount */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "16px", paddingBottom: "16px" }}>
                     <div>
                       <div style={{ fontSize: "12px", opacity: 0.7 }}>Coverage Period</div>
-                      <div style={{ fontSize: "14px", fontWeight: 500 }}>{fmtDate(cycleStart)} – {fmtDate(cycleEnd)}</div>
+                      <div style={{ fontSize: "14px", fontWeight: 600, marginTop: "2px" }}>{fmtDate(cycleStart)} – {fmtDate(cycleEnd)}</div>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: "18px", fontWeight: 700 }}>{fmt(pricing.nextPremium)}</div>
-                      <button onClick={onPayPremium} style={{ 
-                        background: "rgba(255,255,255,0.15)", border: "none", color: "white", 
-                        padding: "4px 10px", borderRadius: "6px", fontSize: "11px", fontWeight: 600, marginTop: "6px", cursor: "pointer"
-                      }}>Pay Early</button>
+                      <div style={{ fontSize: "12px", opacity: 0.7 }}>Amount</div>
+                      <div style={{ fontSize: "18px", fontWeight: 700, marginTop: "2px" }}>{fmt(pricing.nextPremium)}</div>
                     </div>
                   </div>
-                </>
+
+                  {/* Bottom item: Action Button */}
+                  <div>
+                    <button onClick={onPayPremium} style={{ 
+                      background: "rgba(255,255,255,0.15)", border: "none", color: "var(--text-on-dark-bg)", width: "100%",
+                      padding: "10px", borderRadius: "8px", fontSize: "13px", fontWeight: 600, cursor: "pointer"
+                    }}>Pay Premium Early</button>
+                  </div>
+                </div>
               );
             })()}
           </div>
@@ -736,12 +756,12 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout, paidForNextWe
             )}
           </div>
           {hasPayout && !payoutState ? (
-            <button className="alert-btn" style={{ background: "var(--green)", color: "#fff", display: "flex", alignItems: "center", gap: 6 }} onClick={handleInitiatePayout} disabled={payoutLoading}>
+            <button className="alert-btn" style={{ background: "var(--green)", color: "var(--text-on-primary)", display: "flex", alignItems: "center", gap: 6 }} onClick={handleInitiatePayout} disabled={payoutLoading}>
               {payoutLoading ? <><Radio size={14} className="spin" /> Processing...</> : <><Zap size={14} /> Claim Payout</>}
             </button>
           ) : (
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              <button className="alert-btn" style={{ background: payoutState ? "var(--green)" : "var(--purple)", color: "#fff" }} onClick={onViewClaim}>
+              <button className="alert-btn" style={{ background: payoutState ? "var(--green)" : "var(--purple)", color: "var(--text-on-primary)" }} onClick={onViewClaim}>
                 {payoutState ? "View Receipt" : hasPayout ? "View Breakdown" : "Check Details"}
               </button>
               {payoutState && (
@@ -822,12 +842,12 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout, paidForNextWe
         <div className="two-col">
           <div className="card">
             <div className="card-title"><FileText size={13} /> Current Plan Details</div>
-            <div style={{ fontSize: 17, fontWeight: 700, color: tier.accent, marginBottom: 14, letterSpacing: -0.3 }}>{tier.label} Coverage — Slab 3 ({(tier.rate * 100).toFixed(1)}%)</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: tier.accent, marginBottom: 14, letterSpacing: -0.3 }}>{tier.label} Coverage — {tier.tabLabel} ({(tier.rate * 100).toFixed(1)}%)</div>
             {[
-              ["Weekly Premium", <span style={{ color: "var(--purple)" }}>{fmt(pricing.weeklyPremium)}</span>],
-              ["Plan Premium (Slab 3)", <span style={{ color: "var(--purple)" }}>{fmt(pricing.planPremium)}</span>],
+              ["Weekly Premium", <span style={{ color: "var(--purple-dark)" }}>{fmt(pricing.weeklyPremium)}</span>],
+              ["Plan Premium", <span style={{ color: "var(--purple-dark)" }}>{fmt(pricing.planPremium)}</span>],
               ["Default Penalty", pricing.isNewCustomer ? "None — new customer" : pricing.defaults > 0 ? `+${fmt(pricing.defaultPenaltyAmt)} (2% × ${pricing.defaults} wks)` : "None — no missed payments"],
-              ["Loyalty Reward", pricing.isNewCustomer ? "None — new customer" : pricing.loyaltyRewardAmt > 0 ? `−${fmt(pricing.loyaltyRewardAmt)} (52-wk non-defaulter)` : "None"],
+              ["Loyalty Reward", pricing.isNewCustomer ? "None — new customer" : pricing.loyaltyRewardAmt > 0 ? `−${fmt(pricing.loyaltyRewardAmt)} (${partner.dbRecord?.weeks_loyal || 52}-wk non-defaulter)` : "None"],
               ["Claim Coverage", `${(pricing.adjCoverPct * 100).toFixed(0)}% of income loss`],
               ["Rain Trigger", "15cm rain → 80% coverage"],
               ["Income Threshold", `75% of avg = ${fmt(pricing.threshold)}`],
@@ -835,7 +855,7 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout, paidForNextWe
             ].map(([l, v]) => (
               <div className="detail-row" key={l}>
                 <span className="detail-label">{l}</span>
-                <span className="detail-val">{v}</span>
+                <span className="detail-val" style={{ color: "var(--purple-dark)" }}>{v}</span>
               </div>
             ))}
           </div>
@@ -873,8 +893,8 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout, paidForNextWe
         {/* Simulation CTA */}
         <div className="sim-cta-strip">
           <div className="sim-cta-left">
-            <div className="sim-cta-icon">
-              <Satellite size={22} color="#6366F1" />
+            <div className="sim-cta-icon" style={{ background: "var(--purple-pale)" }}>
+              <Satellite size={22} color="var(--purple)" />
             </div>
             <div>
               <div style={{ fontSize: 15, fontWeight: 700, color: "var(--purple-dark)", letterSpacing: -0.2 }}>Disruption Simulation</div>
@@ -889,8 +909,8 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout, paidForNextWe
         {/* What-If Calculator CTA */}
         <div className="sim-cta-strip" style={{ marginTop: 16 }}>
           <div className="sim-cta-left">
-            <div className="sim-cta-icon" style={{ background: "rgba(107, 45, 139, 0.1)" }}>
-              <Calculator size={22} color="#6B2D8B" />
+            <div className="sim-cta-icon" style={{ background: "var(--purple-pale)" }}>
+              <Calculator size={22} color="var(--purple)" />
             </div>
             <div>
               <div style={{ fontSize: 15, fontWeight: 700, color: "var(--purple-dark)", letterSpacing: -0.2 }}>"What If" Premium Calculator</div>
@@ -1000,7 +1020,7 @@ function PlanSelector({ partnerId, onPaymentSuccess }) {
       <div style={{ maxWidth: 940, margin: "0 auto 32px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: "26px 28px" }}>
         <div style={{ fontSize: 17, fontWeight: 700, color: "var(--purple-dark)", letterSpacing: -0.3, marginBottom: 4 }}>Next Week's Premium — How It's Calculated</div>
         <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 20 }}>
-          Updated rolling avg after this week's earning of {fmt(pricing.currentEarning)} (16–22 Jun 2025)
+          Updated rolling avg after this week's earning of {fmt(pricing.currentEarning)} ({thisWeekStr})
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 20 }}>
           {[
@@ -1024,22 +1044,22 @@ function PlanSelector({ partnerId, onPaymentSuccess }) {
         )}
         {pricing.nextLoyaltyAmt > 0 && (
           <div style={{ background: "var(--green-bg)", border: "1px solid var(--green-bdr)", borderRadius: 10, padding: "10px 16px", marginBottom: 16, fontSize: 13, color: "var(--green)", display: "flex", alignItems: "center", gap: 8 }}>
-            <CheckCircle size={14} /> Loyalty reward: −{fmt(pricing.nextLoyaltyAmt)} applied for 52-week clean payment record!
+            <CheckCircle size={14} /> Loyalty reward: −{fmt(pricing.nextLoyaltyAmt)} applied for {partner.dbRecord?.weeks_loyal || 52}-week clean payment record!
           </div>
         )}
-        <div style={{ background: "linear-gradient(135deg,#3B0764,#5B21B6)", borderRadius: 14, padding: "18px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+        <div className="premium-inner-banner" style={{ borderRadius: 14, padding: "18px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
           <div>
-            <div style={{ fontSize: 11, color: "#C4A8E0", letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>Next Week's Premium Due · 16–22 Jun 2025</div>
-            <div style={{ fontSize: 13, color: "rgba(250,248,255,0.78)" }}>
-              Slab 3: {(pricing.tier.rate * 100).toFixed(1)}% × {fmt(pricing.nextAvg)} = {fmt(pricing.nextPlanPremium)}
+            <div style={{ fontSize: 11, color: "var(--text-on-dark-bg-muted)", letterSpacing: 1, textTransform: "uppercase", marginBottom: 5 }}>Next Week's Premium Due · {nextWeekStr}</div>
+            <div style={{ fontSize: 13, color: "var(--text-on-dark-bg-muted)" }}>
+              {pricing.tier.tabLabel}: {(pricing.tier.rate * 100).toFixed(1)}% × {fmt(pricing.nextAvg)} = {fmt(pricing.nextPlanPremium)}
               {pricing.defaultPenaltyAmt > 0 && ` + ${fmt(pricing.defaultPenaltyAmt)} default penalty`}
               {pricing.nextLoyaltyAmt > 0 && ` − ${fmt(pricing.nextLoyaltyAmt)} loyalty reward`}
             </div>
-            <div style={{ fontSize: 11, color: "#C4A8E0", marginTop: 3 }}>Coverage: {(pricing.adjCoverPct * 100).toFixed(0)}% of verified income loss</div>
+            <div style={{ fontSize: 11, color: "var(--text-on-dark-bg-muted)", marginTop: 3 }}>Coverage: {(pricing.adjCoverPct * 100).toFixed(0)}% of verified income loss</div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 11, color: "#C4A8E0", marginBottom: 2 }}>Net Weekly Premium</div>
-            <div style={{ fontSize: 32, fontWeight: 700, color: "#FAF8FF", fontFamily: "var(--mono)", letterSpacing: -1 }}>{fmt(pricing.nextPremium)}</div>
+            <div style={{ fontSize: 11, color: "var(--text-on-dark-bg-muted)", marginBottom: 2 }}>Net Weekly Premium</div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: "var(--text-on-dark-bg)", fontFamily: "var(--mono)", letterSpacing: -1 }}>{fmt(pricing.nextPremium)}</div>
           </div>
         </div>
       </div>
@@ -1077,7 +1097,7 @@ function PlanSelector({ partnerId, onPaymentSuccess }) {
                 {isSelected && (
                   <div style={{
                     position: "absolute", top: "-12px", left: "50%", transform: "translateX(-50%)",
-                    background: tierInfo.accent, color: "#fff", fontSize: "10px", fontWeight: 700,
+                    background: tierInfo.accent, color: "var(--text-on-dark-bg)", fontSize: "10px", fontWeight: 700,
                     padding: "4px 14px", borderRadius: "20px", letterSpacing: "1px", textTransform: "uppercase",
                     boxShadow: "0 4px 10px rgba(0,0,0,0.15)"
                   }}>
@@ -1820,6 +1840,33 @@ function AppContent() {
       localStorage.removeItem("gic_partner_id");
     }
   }, [partnerId]);
+
+  const location = useLocation();
+
+  // Dynamic Platform Theming
+  useEffect(() => {
+    // Clear previous themes
+    document.body.classList.remove('theme-instamart', 'theme-blinkit', 'theme-zepto');
+
+    // Do not apply themes on the B2B partner portal
+    if (location.pathname === '/b2b') {
+      return;
+    }
+
+    if (partnerId && PARTNERS[partnerId]) {
+      const platform = (PARTNERS[partnerId]?.dbRecord?.platform || "Zepto").toLowerCase();
+      if (platform === 'instamart') {
+        document.body.classList.add('theme-instamart');
+      } else if (platform === 'blinkit') {
+        document.body.classList.add('theme-blinkit');
+      } else {
+        document.body.classList.add('theme-zepto');
+      }
+    } else {
+      // Default to zepto if logged out (e.g., login screen)
+      document.body.classList.add('theme-zepto');
+    }
+  }, [partnerId, location.pathname]);
 
   // Call the REAL backend evaluation API whenever user is logged in
   useEffect(() => {
