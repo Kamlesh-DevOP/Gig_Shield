@@ -29,6 +29,12 @@ services:
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
 
+      # --- Payment Gateway ---
+      - key: RAZORPAY_TEST_KEY_ID
+        sync: false
+      - key: RAZORPAY_TEST_KEY_SECRET
+        sync: false
+
       # --- App tuning ---
       - key: GIGSHIELD_MODEL_DIR
         value: models
