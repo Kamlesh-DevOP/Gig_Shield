@@ -466,8 +466,72 @@ a {
 }
 
 /* ─────────────────────────────────────────────────────────────────── */
-/* Simulate Disruption Styles                                          */
+/* Live MCP Scan Styles                                               */
 /* ─────────────────────────────────────────────────────────────────── */
+
+.pred-card-live {
+  border-left: 3px solid var(--purple) !important;
+  background: linear-gradient(145deg, var(--surface-dark), rgba(107, 45, 139, 0.05)) !important;
+  box-shadow: 0 4px 12px rgba(107, 45, 139, 0.1);
+}
+
+.pred-card-live-highlight {
+  border: 1px solid rgba(107, 45, 139, 0.3) !important;
+  border-left: 4px solid var(--purple-dark) !important;
+  background: linear-gradient(145deg, #F3EEFF, #FFFFFF) !important;
+  box-shadow: 0 6px 16px rgba(107, 45, 139, 0.15);
+}
+
+.sim-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.mcp-disruptions-grid {
+  margin-top: 1.5rem;
+}
+
+.mcp-city-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mcp-city-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* Specific button styles */
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sim-val-amber { color: var(--sim-amber); }
+.sim-val-payout { color: var(--sim-red); }
+.sim-val-green { color: var(--sim-green); }
+
+/* Animation Overrides for MCP */
+.mcp-offline-banner {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #D97706;
+  padding: 1rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.mcp-scan-step-dot {
+  background: var(--purple) !important;
+  box-shadow: 0 0 8px rgba(107, 45, 139, 0.4);
+}
 
 :root {
   --sim-amber:   #D97706;

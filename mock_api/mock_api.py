@@ -16,7 +16,7 @@ CITIES = ["Chennai", "Mumbai", "Bengaluru", "Hyderabad", "Kolkata", "Delhi", "Pu
 AREAS_BY_CITY = {
     "Chennai": ["OMR", "Velachery", "Tambaram"],
     "Mumbai": ["Bandra", "Andheri", "Dadar"],
-    "Bengaluru": ["Whitefield", "BTM", "Electronic City"],
+    "Bengaluru": ["Indiranagar", "BTM Layout", "Electronic City"],
     "Hyderabad": ["Gachibowli", "Hitech City", "Secunderabad"],
     "Delhi": ["Rohini", "Dwarka", "Connaught Place"],
     "Kolkata": ["Salt Lake", "Howrah", "Park Street"],
