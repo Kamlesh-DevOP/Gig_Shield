@@ -5,8 +5,10 @@ import {
   MapPin, BarChart2, CircleDollarSign, Target,
   Droplets, Wind, Thermometer, Gauge, Satellite,
   Brain, Scan, BadgeCheck, XCircle, ChevronRight,
-  Banknote, Clock, Percent, FileText,
+  Banknote, Clock, Percent, FileText, Map,
 } from "lucide-react";
+import DisruptionTypeTabs from "./DisruptionTypeTabs";
+import CoverageMapTab from "./CoverageMap";
 
 const API = "http://localhost:8000";
 const fmt = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
@@ -16,22 +18,25 @@ const normalizeDecision = (d) => isApproved(d) ? "APPROVE" : String(d || "REJECT
 // ── Simulation Step Pipeline ─────────────────────────────────────────────────
 
 const PIPELINE_STEPS = [
-  { key: "idle",       label: "Ready",             icon: Zap,              color: "#7B6899" },
-  { key: "weather",    label: "Fetching Weather",  icon: CloudRain,        color: "#2563EB" },
-  { key: "analyzing",  label: "ML Inference",      icon: Brain,            color: "#7C3AED" },
-  { key: "eligibility",label: "Eligibility Check", icon: Scan,             color: "#D97706" },
-  { key: "decision",   label: "Decision",          icon: ShieldCheck,      color: "#059669" },
+  { key: "idle", label: "Ready", icon: Zap, color: "#7B6899" },
+  { key: "weather", label: "Environmental", icon: CloudRain, color: "#2563EB" },
+  { key: "market", label: "Market Intel", icon: Radio, color: "#6366F1" },
+  { key: "analyzing", label: "ML Inference", icon: Brain, color: "#7C3AED" },
+  { key: "eligibility", label: "Eligibility Check", icon: Scan, color: "#D97706" },
+  { key: "decision", label: "Decision", icon: ShieldCheck, color: "#059669" },
 ];
 
 export default function SimulationPage({ partnerId, partnerData, onBack }) {
+  const [activeTab, setActiveTab] = useState("simulation");
   const [city, setCity] = useState(partnerData?.city || "Chennai");
   const [scenario, setScenario] = useState("flood");
-  const [step, setStep]         = useState("idle");        // pipeline step
-  const [weather, setWeather]   = useState(null);
-  const [mlPreds, setMlPreds]   = useState(null);
+  const [step, setStep] = useState("idle");        // pipeline step
+  const [weather, setWeather] = useState(null);
+  const [marketIntel, setMarketIntel] = useState(null);
+  const [mlPreds, setMlPreds] = useState(null);
   const [claimResult, setClaimResult] = useState(null);
-  const [error, setError]       = useState(null);
-  const [logs, setLogs]         = useState([]);
+  const [error, setError] = useState(null);
+  const [logs, setLogs] = useState([]);
   const logRef = useRef(null);
 
   const addLog = (msg, type = "info") => {
@@ -44,9 +49,9 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
 
   const cities = ["Chennai", "Mumbai", "Bengaluru", "Hyderabad", "Kolkata", "Delhi", "Pune", "Ahmedabad"];
   const scenarios = [
-    { key: "flood",   label: "🌧️ Heavy Rainfall / Flood", desc: "150-250mm rain in 24h" },
-    { key: "cyclone", label: "🌀 Cyclone Alert",          desc: "200-300mm + high winds" },
-    { key: "normal",  label: "☀️ Normal Conditions",       desc: "0-120mm random rain" },
+    { key: "flood", label: "🌧️ Heavy Rainfall / Flood", desc: "150-250mm rain in 24h" },
+    { key: "cyclone", label: "🌀 Cyclone Alert", desc: "200-300mm + high winds" },
+    { key: "normal", label: "☀️ Normal Conditions", desc: "0-120mm random rain" },
   ];
 
   // Build the worker record for sending to backend
@@ -70,42 +75,42 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
     }
 
     return {
-      worker_id:              db.worker_id     || parseInt(partnerId.replace(/\D/g, "")) || 1,
-      city:                   city,
-      avg_52week_income:      avgIncome,
-      disruption_type:        scenario === "flood" ? "Heavy_Rain" : scenario === "cyclone" ? "Cyclone" : "Normal",
-      selected_slab:          db.selected_slab          || "Slab_100",
+      worker_id: db.worker_id || parseInt(partnerId.replace(/\D/g, "")) || 1,
+      city: city,
+      avg_52week_income: avgIncome,
+      disruption_type: scenario === "flood" ? "Heavy_Rain" : scenario === "cyclone" ? "Cyclone" : "Normal",
+      selected_slab: db.selected_slab || "Slab_100",
       income_loss_percentage: scenario === "flood" ? 55 : scenario === "cyclone" ? 70 : 5,
-      employment_type:        db.employment_type         || "Full-Time",
-      platform:               db.platform                || "Zepto",
-      premium_paid:           1,   // Simulation assumes premium is paid
+      employment_type: db.employment_type || "Full-Time",
+      platform: db.platform || "Zepto",
+      premium_paid: 1,   // Simulation assumes premium is paid
       cooling_period_completed: 1, // Simulation assumes cooling period done
-      weeks_active:           db.weeks_active            || 26,
-      week_of_year:           db.week_of_year            || 20,
-      weekly_income:          simulatedWeeklyIncome,
-      income_std_dev:         db.income_std_dev           || 200,
-      income_volatility:      db.income_volatility        || 0.1,
-      orders_completed_week:  scenario === "normal" ? (db.orders_completed_week || 50) : Math.round((db.orders_completed_week || 50) * 0.4),
-      active_hours_week:      scenario === "normal" ? (db.active_hours_week || 40) : Math.round((db.active_hours_week || 40) * 0.5),
+      weeks_active: db.weeks_active || 26,
+      week_of_year: db.week_of_year || 20,
+      weekly_income: simulatedWeeklyIncome,
+      income_std_dev: db.income_std_dev || 200,
+      income_volatility: db.income_volatility || 0.1,
+      orders_completed_week: scenario === "normal" ? (db.orders_completed_week || 50) : Math.round((db.orders_completed_week || 50) * 0.4),
+      active_hours_week: scenario === "normal" ? (db.active_hours_week || 40) : Math.round((db.active_hours_week || 40) * 0.5),
       disruption_duration_hours: scenario === "flood" ? 12 : scenario === "cyclone" ? 24 : 0,
-      rainfall_cm:            scenario === "flood" ? 18 : scenario === "cyclone" ? 25 : 3,
-      temperature_extreme:    db.temperature_extreme      || 28,
-      cyclone_alert_level:    scenario === "cyclone" ? 3 : 0,
+      rainfall_cm: scenario === "flood" ? 18 : scenario === "cyclone" ? 25 : 3,
+      temperature_extreme: db.temperature_extreme || 28,
+      cyclone_alert_level: scenario === "cyclone" ? 3 : 0,
       payment_consistency_score: db.payment_consistency_score || 0.9,
-      fraud_trust_rating:     db.fraud_trust_rating       || 0.85,
-      overall_risk_score:     db.overall_risk_score       || 0.2,
+      fraud_trust_rating: db.fraud_trust_rating || 0.85,
+      overall_risk_score: db.overall_risk_score || 0.2,
       disruption_exposure_risk: scenario === "normal" ? 0.1 : 0.7,
-      distance_from_outlet_km:  db.distance_from_outlet_km  || 5,
-      order_acceptance_rate:  db.order_acceptance_rate     || 0.9,
-      order_decline_rate:     db.order_decline_rate        || 0.1,
-      gps_spoofing_score:     db.gps_spoofing_score        || 0,
-      movement_realism_score: db.movement_realism_score    || 1,
-      presence_score:         db.presence_score            || 1,
+      distance_from_outlet_km: db.distance_from_outlet_km || 5,
+      order_acceptance_rate: db.order_acceptance_rate || 0.9,
+      order_decline_rate: db.order_decline_rate || 0.1,
+      gps_spoofing_score: db.gps_spoofing_score || 0,
+      movement_realism_score: db.movement_realism_score || 1,
+      presence_score: db.presence_score || 1,
       peer_group_activity_ratio: db.peer_group_activity_ratio || 1,
       consecutive_payment_weeks: db.consecutive_payment_weeks || 10,
       coordinated_fraud_cluster_id: db.coordinated_fraud_cluster_id || 0,
-      ip_gps_mismatch:        db.ip_gps_mismatch           || 0,
-      device_sharing_flag:    db.device_sharing_flag        || 0,
+      ip_gps_mismatch: db.ip_gps_mismatch || 0,
+      device_sharing_flag: db.device_sharing_flag || 0,
     };
   };
 
@@ -113,6 +118,7 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
   const runSimulation = async () => {
     setError(null);
     setWeather(null);
+    setMarketIntel(null);
     setMlPreds(null);
     setClaimResult(null);
     setLogs([]);
@@ -156,6 +162,42 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
       setError(`Weather API failed: ${e.message}`);
       setStep("idle");
       return;
+    }
+
+    // ── STEP 1.5: Market Intelligence (Tavily / News) ──
+    try {
+      setStep("market");
+      addLog(`📡 Searching for active market disruptions in ${city} via MCP tools...`, "info");
+      addLog(`   → Tool: tavily_search ('current hazards ${scenario} ${city}')`, "data");
+      addLog(`   → Tool: get_news_threats (location: ${city})`, "data");
+      await sleep(1000);
+
+      // We'll call the real dynamic risk endpoint which uses MCP tools
+      const marketRes = await fetch(`${API}/api/risk/dynamic`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ city, work_type: partnerData?.dbRecord?.employment_type || "delivery" }),
+      });
+
+      if (!marketRes.ok) {
+        // Fallback to mock data if MCP server isn't running
+        addLog(`⚠️  MCP Layer unreachable. Using cached market intelligence.`, "warning");
+        const mockIntel = getMockMarketIntel(city, scenario);
+        setMarketIntel(mockIntel);
+      } else {
+        const intelData = await marketRes.json();
+        setMarketIntel(intelData);
+        addLog(`✅ Market intelligence received: ${intelData.overall_risk_level} threat level`, "success");
+        if (intelData.hazard_context) {
+          addLog(`   → Found: ${intelData.hazard_context}`, "warning");
+        }
+      }
+
+      await sleep(600);
+    } catch (e) {
+      addLog(`⚠️  Market check failed: ${e.message}`, "warning");
+      // Don't stop the whole pipeline for market intel failures
+      await sleep(400);
     }
 
     // ── STEP 2: ML Inference ──
@@ -265,325 +307,383 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
           <ArrowLeft size={16} /> Back to Dashboard
         </button>
 
-        {/* ── Hero ── */}
-        <div className="sim-hero">
-          <div className="sim-hero-grid" />
-          <div className="sim-hero-content">
-            <div className="sim-hero-badge">
-              <Satellite size={12} /> LIVE SIMULATION
-            </div>
-            <div className="sim-hero-title">Disruption Simulation Engine</div>
-            <div className="sim-hero-sub">
-              Trigger a real weather event → watch the ML pipeline analyze, score, and decide payouts in real time.
-            </div>
-          </div>
-          <div className="sim-hero-visual">
-            <div className={`sim-radar ${isRunning ? "active" : ""}`}>
-              <CloudRain size={32} color="#C4A8E0" />
-              <div className="radar-ring r1" />
-              <div className="radar-ring r2" />
-              <div className="radar-ring r3" />
-            </div>
-          </div>
+        {/* ── Tab Nav ── */}
+        <div className="sim-tabs-nav">
+          <button
+            className={`sim-tab-btn ${activeTab === "simulation" ? "active" : ""}`}
+            onClick={() => setActiveTab("simulation")}
+          >
+            <Satellite size={14} /> Live Simulation
+          </button>
+          <button
+            className={`sim-tab-btn ${activeTab === "map" ? "active" : ""}`}
+            onClick={() => setActiveTab("map")}
+          >
+            <Map size={14} /> Coverage Map
+          </button>
         </div>
 
-        {/* ── Controls ── */}
-        <div className="sim-controls">
-          <div className="sim-control-group">
-            <label className="sim-label">
-              <MapPin size={13} /> City
-            </label>
-            <select
-              className="sim-select"
-              value={city}
-              onChange={e => setCity(e.target.value)}
-              disabled={isRunning}
-            >
-              {cities.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
+        {activeTab === "map" && <CoverageMapTab partnerId={partnerId} partnerData={partnerData} />}
 
-          <div className="sim-control-group" style={{ flex: 2 }}>
-            <label className="sim-label">
-              <CloudRain size={13} /> Scenario
-            </label>
-            <div className="sim-scenario-row">
-              {scenarios.map(s => (
-                <button
-                  key={s.key}
-                  className={`sim-scenario-btn ${scenario === s.key ? "active" : ""}`}
-                  onClick={() => setScenario(s.key)}
-                  disabled={isRunning}
-                >
-                  <span className="ssb-label">{s.label}</span>
-                  <span className="ssb-desc">{s.desc}</span>
-                </button>
-              ))}
+        {activeTab === "simulation" && <>
+
+          {/* ── Hero ── */}
+          <div className="sim-hero">
+            <div className="sim-hero-grid" />
+            <div className="sim-hero-content">
+              <div className="sim-hero-badge">
+                <Satellite size={12} /> LIVE SIMULATION
+              </div>
+              <div className="sim-hero-title">Disruption Simulation Engine</div>
+              <div className="sim-hero-sub">
+                Trigger a real weather event → watch the ML pipeline analyze, score, and decide payouts in real time.
+              </div>
+            </div>
+            <div className="sim-hero-visual">
+              <div className={`sim-radar ${isRunning ? "active" : ""}`}>
+                <CloudRain size={32} color="#C4A8E0" />
+                <div className="radar-ring r1" />
+                <div className="radar-ring r2" />
+                <div className="radar-ring r3" />
+              </div>
             </div>
           </div>
 
-          <div className="sim-control-group" style={{ alignSelf: "flex-end" }}>
-            <button
-              className={`sim-run-btn ${isRunning ? "running" : isDone ? "done" : ""}`}
-              onClick={runSimulation}
-              disabled={isRunning}
-            >
-              {isRunning ? (
-                <><span className="spin"><Radio size={16} /></span> Running...</>
-              ) : isDone ? (
-                <><Zap size={16} /> Re-run Simulation</>
-              ) : (
-                <><Zap size={16} /> Run Simulation</>
-              )}
-            </button>
-          </div>
-        </div>
+          {/* ── Controls ── */}
+          <div className="sim-controls">
+            <div className="sim-control-group">
+              <label className="sim-label">
+                <MapPin size={13} /> City
+              </label>
+              <select
+                className="sim-select"
+                value={city}
+                onChange={e => setCity(e.target.value)}
+                disabled={isRunning}
+              >
+                {cities.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
 
-        {/* ── Pipeline Steps ── */}
-        <div className="sim-pipeline">
-          {PIPELINE_STEPS.map((ps, i) => {
-            const isActive  = ps.key === step;
-            const isPast    = i < currentStepIdx;
-            const isFuture  = i > currentStepIdx;
-            const Icon      = ps.icon;
-            return (
-              <div key={ps.key} className="sim-pipe-step-wrapper">
-                <div className={`sim-pipe-step ${isActive ? "active" : isPast ? "done" : "future"}`}>
-                  <div className="sps-icon" style={{
-                    background: isPast ? "var(--green-bg)"
-                              : isActive ? `${ps.color}18`
-                              : "var(--surface2)",
-                    borderColor: isPast ? "var(--green-bdr)"
-                              : isActive ? ps.color
-                              : "var(--border)",
-                    color: isPast ? "var(--green)"
-                         : isActive ? ps.color
-                         : "var(--muted)",
-                  }}>
-                    {isPast ? <CheckCircle size={16} /> : isActive && isRunning ? <span className="spin"><Radio size={16} /></span> : <Icon size={16} />}
-                  </div>
-                  <div className="sps-label" style={{
-                    color: isPast ? "var(--green)"
-                         : isActive ? ps.color
-                         : "var(--muted)",
-                  }}>{ps.label}</div>
-                </div>
-                {i < PIPELINE_STEPS.length - 1 && (
-                  <div className={`sim-pipe-line ${isPast ? "done" : ""}`} />
+            <div className="sim-control-group" style={{ flex: 2 }}>
+              <label className="sim-label">
+                <CloudRain size={13} /> Scenario
+              </label>
+              <DisruptionTypeTabs scenario={scenario} setScenario={setScenario} isRunning={isRunning} />
+            </div>
+
+            <div className="sim-control-group" style={{ alignSelf: "flex-end" }}>
+              <button
+                className={`btn-premium ${isRunning ? "running" : ""}`}
+                onClick={runSimulation}
+                disabled={isRunning}
+                style={{ height: "48px", minWidth: "180px" }}
+              >
+                {isRunning ? (
+                  <><span className="spin"><Radio size={16} /></span> Running...</>
+                ) : isDone ? (
+                  <><RefreshCw size={16} /> Re-run Simulation</>
+                ) : (
+                  <><Zap size={16} /> Run Simulation</>
                 )}
-              </div>
-            );
-          })}
-        </div>
+              </button>
+            </div>
+          </div>
 
-        {/* ── Main content: Results + Live Log ── */}
-        <div className="sim-main-grid">
-          {/* ── Left: Results ── */}
-          <div className="sim-results">
-
-            {/* Weather Results */}
-            {weather && (
-              <div className="sim-result-card weather-card">
-                <div className="src-header">
-                  <CloudRain size={15} color="#2563EB" />
-                  <span>Weather Data — {weather.city}</span>
-                  <span className="src-badge" style={{ background: "#2563EB15", color: "#2563EB", borderColor: "#2563EB44" }}>
-                    {weather.reports.length} stations
-                  </span>
-                </div>
-                <div className="sim-weather-grid">
-                  {weather.reports.map((r, i) => (
-                    <div key={i} className="sw-station">
-                      <div className="sw-area">{r.area}</div>
-                      <div className="sw-metrics">
-                        <div className="sw-metric">
-                          <Droplets size={12} color="#2563EB" />
-                          <span className="sw-metric-val">{r.measurements.rainfall_mm_24h}mm</span>
-                          <span className="sw-metric-label">Rain</span>
-                        </div>
-                        <div className="sw-metric">
-                          <Wind size={12} color="#64748B" />
-                          <span className="sw-metric-val">{r.measurements.wind_speed_kmph} km/h</span>
-                          <span className="sw-metric-label">Wind</span>
-                        </div>
-                        <div className="sw-metric">
-                          <Thermometer size={12} color="#DC2626" />
-                          <span className="sw-metric-val">{r.measurements.temperature_c}°C</span>
-                          <span className="sw-metric-label">Temp</span>
-                        </div>
-                        <div className="sw-metric">
-                          <Gauge size={12} color="#7C3AED" />
-                          <span className="sw-metric-val">{r.measurements.humidity_percent}%</span>
-                          <span className="sw-metric-label">Humidity</span>
-                        </div>
-                      </div>
-                      <div className={`sw-alert sw-alert-${r.alerts.level.toLowerCase()}`}>
-                        <AlertTriangle size={10} /> {r.alerts.level} Alert — {r.condition_summary}
-                      </div>
+          {/* ── Pipeline Steps ── */}
+          <div className="sim-pipeline">
+            {PIPELINE_STEPS.map((ps, i) => {
+              const isActive = ps.key === step;
+              const isPast = i < currentStepIdx;
+              const isFuture = i > currentStepIdx;
+              const Icon = ps.icon;
+              return (
+                <div key={ps.key} className="sim-pipe-step-wrapper">
+                  <div className={`sim-pipe-step ${isActive ? "active" : isPast ? "done" : "future"}`}>
+                    <div className="sps-icon" style={{
+                      background: isPast ? "var(--green-bg)"
+                        : isActive ? `${ps.color}18`
+                          : "var(--surface2)",
+                      borderColor: isPast ? "var(--green-bdr)"
+                        : isActive ? ps.color
+                          : "var(--border)",
+                      color: isPast ? "var(--green)"
+                        : isActive ? ps.color
+                          : "var(--muted)",
+                    }}>
+                      {isPast ? <CheckCircle size={16} /> : isActive && isRunning ? <span className="spin"><Radio size={16} /></span> : <Icon size={16} />}
                     </div>
-                  ))}
+                    <div className="sps-label" style={{
+                      color: isPast ? "var(--green)"
+                        : isActive ? ps.color
+                          : "var(--muted)",
+                    }}>{ps.label}</div>
+                  </div>
+                  {i < PIPELINE_STEPS.length - 1 && (
+                    <div className={`sim-pipe-line ${isPast ? "done" : ""}`} />
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            })}
+          </div>
 
-            {/* ML Predictions */}
-            {mlPreds && (
-              <div className="sim-result-card ml-card">
-                <div className="src-header">
-                  <Brain size={15} color="#7C3AED" />
-                  <span>ML Predictions — Worker #{mlPreds.worker_id}</span>
-                </div>
-                <div className="sim-ml-grid">
-                  {renderMLPredictions(mlPreds.predictions)}
-                </div>
-              </div>
-            )}
+          {/* ── Main content: Results + Live Log ── */}
+          <div className="sim-main-grid">
+            {/* ── Left: Results ── */}
+            <div className="sim-results">
 
-            {/* Decision / Claim Result */}
-            {claimResult && (
-              <div className={`sim-result-card decision-card ${claimResult.decision === "APPROVE" ? "approved" : "rejected"}`}>
-                <div className="src-header">
-                  {claimResult.decision === "APPROVE"
-                    ? <BadgeCheck size={15} color="var(--green)" />
-                    : <XCircle size={15} color="var(--red)" />
-                  }
-                  <span>Claim Decision</span>
-                  <span className={`src-badge ${claimResult.decision === "APPROVE" ? "badge-green" : "badge-red"}`}>
-                    {claimResult.decision}
-                  </span>
-                </div>
-
-                <div className="sim-decision-grid">
-                  <div className="sd-main-box">
-                    <div className="sd-main-label">Final Payout</div>
-                    <div className={`sd-main-val ${claimResult.payout_amount > 0 ? "green" : ""}`}>
-                      {fmt(claimResult.payout_amount || 0)}
-                    </div>
-                    <div className="sd-main-sub">
-                      Confidence: {typeof claimResult.confidence === "number" ? (claimResult.confidence * 100).toFixed(1) + "%" : claimResult.confidence}
-                      {" · "}
-                      {claimResult.processing_time_ms}ms
-                    </div>
+              {/* Market Intelligence Results */}
+              {marketIntel && (
+                <div className="sim-result-card market-card">
+                  <div className="src-header">
+                    <Radio size={15} color="#6366F1" />
+                    <span>Market Intelligence — {marketIntel.city}</span>
+                    <span className={`src-badge ${marketIntel.overall_risk_level === "HIGH" || marketIntel.overall_risk_level === "CRITICAL" ? "badge-red" : "badge-green"}`}>
+                      {marketIntel.overall_risk_level} RISK
+                    </span>
                   </div>
 
-                  <div className="sd-details">
-                    {[
-                      ["Decision", claimResult.decision],
-                      ["Trace ID", claimResult.trace_id?.slice(0, 12) + "..."],
-                      ["Worker ID", claimResult.worker_id],
-                      ["Timestamp", claimResult.timestamp ? new Date(claimResult.timestamp).toLocaleString() : "—"],
-                    ].map(([l, v]) => (
-                      <div key={l} className="sd-detail-row">
-                        <span className="sd-detail-label">{l}</span>
-                        <span className="sd-detail-val">{v}</span>
+                  <div className="market-intel-content">
+                    <div className="mi-summary-row">
+                      <div className="mi-factor">
+                        <div className="mi-factor-label">Risk Multiplier</div>
+                        <div className="mi-factor-val">{marketIntel.combined_multiplier?.toFixed(2)}x</div>
+                      </div>
+                      <div className="mi-factor">
+                        <div className="mi-factor-label">Environment</div>
+                        <div className="mi-factor-val" style={{ textTransform: 'capitalize' }}>{marketIntel.weather_condition || "Clear"}</div>
+                      </div>
+                      <div className="mi-factor">
+                        <div className="mi-factor-label">Search Signal</div>
+                        <div className="mi-factor-val">{marketIntel.crawl_hazard_level || "LOW"}</div>
+                      </div>
+                    </div>
+
+                    {marketIntel.hazard_context && (
+                      <div className="mi-context-box">
+                        <div className="mi-context-title"><AlertTriangle size={12} /> Active Search Analysis</div>
+                        <div className="mi-context-text">{marketIntel.hazard_context}</div>
+                      </div>
+                    )}
+
+                    {marketIntel.tavily_answer && (
+                      <div className="mi-tavily-box">
+                        <div className="mi-tavily-title"><Satellite size={12} /> Web-Crawl Intel (Tavily AI)</div>
+                        <div className="mi-tavily-answer">{marketIntel.tavily_answer}</div>
+                      </div>
+                    )}
+
+                    <div className="mi-formula">
+                      <code>{marketIntel.formula || `P_final = P_base x ${marketIntel.r_weather} x ${marketIntel.r_market}`}</code>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Weather Results */}
+              {weather && (
+                <div className="sim-result-card weather-card">
+                  <div className="src-header">
+                    <CloudRain size={15} color="#2563EB" />
+                    <span>Weather Data — {weather.city}</span>
+                    <span className="src-badge" style={{ background: "#2563EB15", color: "#2563EB", borderColor: "#2563EB44" }}>
+                      {weather.reports.length} stations
+                    </span>
+                  </div>
+                  <div className="sim-weather-grid">
+                    {weather.reports.map((r, i) => (
+                      <div key={i} className="sw-station">
+                        <div className="sw-area">{r.area}</div>
+                        <div className="sw-metrics">
+                          <div className="sw-metric">
+                            <Droplets size={12} color="#2563EB" />
+                            <span className="sw-metric-val">{r.measurements.rainfall_mm_24h}mm</span>
+                            <span className="sw-metric-label">Rain</span>
+                          </div>
+                          <div className="sw-metric">
+                            <Wind size={12} color="#64748B" />
+                            <span className="sw-metric-val">{r.measurements.wind_speed_kmph} km/h</span>
+                            <span className="sw-metric-label">Wind</span>
+                          </div>
+                          <div className="sw-metric">
+                            <Thermometer size={12} color="#DC2626" />
+                            <span className="sw-metric-val">{r.measurements.temperature_c}°C</span>
+                            <span className="sw-metric-label">Temp</span>
+                          </div>
+                          <div className="sw-metric">
+                            <Gauge size={12} color="#7C3AED" />
+                            <span className="sw-metric-val">{r.measurements.humidity_percent}%</span>
+                            <span className="sw-metric-label">Humidity</span>
+                          </div>
+                        </div>
+                        <div className={`sw-alert sw-alert-${r.alerts.level.toLowerCase()}`}>
+                          <AlertTriangle size={10} /> {r.alerts.level} Alert — {r.condition_summary}
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
+              )}
 
-                {/* Eligibility details */}
-                {claimResult.claim_eligibility && (
-                  <div className="sd-eligibility">
-                    <div className="sd-elig-header">
-                      {claimResult.claim_eligibility.is_eligible
-                        ? <><CheckCircle size={13} color="var(--green)" /> Eligible for Payout</>
-                        : <><XCircle size={13} color="var(--red)" /> Not Eligible</>
-                      }
+              {/* ML Predictions */}
+              {mlPreds && (
+                <div className="sim-result-card ml-card">
+                  <div className="src-header">
+                    <Brain size={15} color="#7C3AED" />
+                    <span>ML Predictions — Worker #{mlPreds.worker_id}</span>
+                  </div>
+                  <div className="sim-ml-grid">
+                    {renderMLPredictions(mlPreds.predictions)}
+                  </div>
+                </div>
+              )}
+
+              {/* Decision / Claim Result */}
+              {claimResult && (
+                <div className={`sim-result-card decision-card ${claimResult.decision === "APPROVE" ? "approved" : "rejected"}`}>
+                  <div className="src-header">
+                    {claimResult.decision === "APPROVE"
+                      ? <BadgeCheck size={15} color="var(--green)" />
+                      : <XCircle size={15} color="var(--red)" />
+                    }
+                    <span>Claim Decision</span>
+                    <span className={`src-badge ${claimResult.decision === "APPROVE" ? "badge-green" : "badge-red"}`}>
+                      {claimResult.decision}
+                    </span>
+                  </div>
+
+                  <div className="sim-decision-grid">
+                    <div className="sd-main-box">
+                      <div className="sd-main-label">Final Payout</div>
+                      <div className={`sd-main-val ${claimResult.payout_amount > 0 ? "green" : ""}`}>
+                        {fmt(claimResult.payout_amount || 0)}
+                      </div>
+                      <div className="sd-main-sub">
+                        Confidence: {typeof claimResult.confidence === "number" ? (claimResult.confidence * 100).toFixed(1) + "%" : claimResult.confidence}
+                        {" · "}
+                        {claimResult.processing_time_ms}ms
+                      </div>
                     </div>
-                    {claimResult.claim_eligibility.reasons?.length > 0 && (
-                      <ul className="sd-elig-reasons">
-                        {claimResult.claim_eligibility.reasons.map((r, i) => (
-                          <li key={i}>{r}</li>
+
+                    <div className="sd-details">
+                      {[
+                        ["Decision", claimResult.decision],
+                        ["Trace ID", claimResult.trace_id?.slice(0, 12) + "..."],
+                        ["Worker ID", claimResult.worker_id],
+                        ["Timestamp", claimResult.timestamp ? new Date(claimResult.timestamp).toLocaleString() : "—"],
+                      ].map(([l, v]) => (
+                        <div key={l} className="sd-detail-row">
+                          <span className="sd-detail-label">{l}</span>
+                          <span className="sd-detail-val">{v}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Eligibility details */}
+                  {claimResult.claim_eligibility && (
+                    <div className="sd-eligibility">
+                      <div className="sd-elig-header">
+                        {claimResult.claim_eligibility.is_eligible
+                          ? <><CheckCircle size={13} color="var(--green)" /> Eligible for Payout</>
+                          : <><XCircle size={13} color="var(--red)" /> Not Eligible</>
+                        }
+                      </div>
+                      {claimResult.claim_eligibility.reasons?.length > 0 && (
+                        <ul className="sd-elig-reasons">
+                          {claimResult.claim_eligibility.reasons.map((r, i) => (
+                            <li key={i}>{r}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Payout breakdown */}
+                  {claimResult.payout_breakdown && (
+                    <div className="sd-breakdown">
+                      <div className="sd-breakdown-title"><Banknote size={13} /> Payout Breakdown</div>
+                      <div className="sd-breakdown-items">
+                        {Object.entries(claimResult.payout_breakdown).map(([k, v]) => (
+                          <div key={k} className="sd-bd-item">
+                            <span className="sd-bd-label">{k.replace(/_/g, " ")}</span>
+                            <span className="sd-bd-val">{typeof v === "number" ? (v > 10 ? fmt(Math.round(v)) : v.toFixed(3)) : String(v)}</span>
+                          </div>
                         ))}
-                      </ul>
-                    )}
-                  </div>
-                )}
+                      </div>
+                    </div>
+                  )}
 
-                {/* Payout breakdown */}
-                {claimResult.payout_breakdown && (
-                  <div className="sd-breakdown">
-                    <div className="sd-breakdown-title"><Banknote size={13} /> Payout Breakdown</div>
-                    <div className="sd-breakdown-items">
-                      {Object.entries(claimResult.payout_breakdown).map(([k, v]) => (
-                        <div key={k} className="sd-bd-item">
-                          <span className="sd-bd-label">{k.replace(/_/g, " ")}</span>
-                          <span className="sd-bd-val">{typeof v === "number" ? (v > 10 ? fmt(Math.round(v)) : v.toFixed(3)) : String(v)}</span>
-                        </div>
-                      ))}
+                  {/* ML predictions in claim */}
+                  {claimResult.ml_predictions && (
+                    <div className="sd-breakdown" style={{ marginTop: 12 }}>
+                      <div className="sd-breakdown-title"><Brain size={13} /> ML Predictions (from Orchestrator)</div>
+                      <div className="sd-breakdown-items">
+                        {Object.entries(claimResult.ml_predictions).map(([k, v]) => (
+                          <div key={k} className="sd-bd-item">
+                            <span className="sd-bd-label">{k.replace(/_/g, " ")}</span>
+                            <span className="sd-bd-val">{typeof v === "number" ? v.toFixed(4) : typeof v === "object" ? JSON.stringify(v).slice(0, 60) : String(v)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Error state */}
+              {error && (
+                <div className="sim-error-card">
+                  <AlertTriangle size={16} color="var(--red)" />
+                  <div>
+                    <div style={{ fontWeight: 700, marginBottom: 4 }}>Simulation Error</div>
+                    <div style={{ fontSize: 13, color: "var(--muted)" }}>{error}</div>
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>
+                      Make sure the backend is running: <code>uvicorn app:app --host 0.0.0.0 --port 8000</code>
                     </div>
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* ML predictions in claim */}
-                {claimResult.ml_predictions && (
-                  <div className="sd-breakdown" style={{ marginTop: 12 }}>
-                    <div className="sd-breakdown-title"><Brain size={13} /> ML Predictions (from Orchestrator)</div>
-                    <div className="sd-breakdown-items">
-                      {Object.entries(claimResult.ml_predictions).map(([k, v]) => (
-                        <div key={k} className="sd-bd-item">
-                          <span className="sd-bd-label">{k.replace(/_/g, " ")}</span>
-                          <span className="sd-bd-val">{typeof v === "number" ? v.toFixed(4) : typeof v === "object" ? JSON.stringify(v).slice(0, 60) : String(v)}</span>
-                        </div>
-                      ))}
-                    </div>
+              {/* Empty state */}
+              {!weather && !mlPreds && !claimResult && !error && (
+                <div className="sim-empty">
+                  <Satellite size={40} color="var(--purple-lt)" />
+                  <div className="sim-empty-title">Ready to Simulate</div>
+                  <div className="sim-empty-sub">
+                    Select a city and scenario, then click <strong>Run Simulation</strong> to trigger the full ML pipeline.
                   </div>
-                )}
-              </div>
-            )}
-
-            {/* Error state */}
-            {error && (
-              <div className="sim-error-card">
-                <AlertTriangle size={16} color="var(--red)" />
-                <div>
-                  <div style={{ fontWeight: 700, marginBottom: 4 }}>Simulation Error</div>
-                  <div style={{ fontSize: 13, color: "var(--muted)" }}>{error}</div>
-                  <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>
-                    Make sure the backend is running: <code>uvicorn app:app --host 0.0.0.0 --port 8000</code>
+                  <div className="sim-empty-steps">
+                    <div>1. Weather data is fetched from the partner API</div>
+                    <div>2. ML models run inference (risk, fraud, income, premium)</div>
+                    <div>3. Orchestrator checks eligibility & calculates payout</div>
+                    <div>4. Decision is rendered with full breakdown</div>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {/* Empty state */}
-            {!weather && !mlPreds && !claimResult && !error && (
-              <div className="sim-empty">
-                <Satellite size={40} color="var(--purple-lt)" />
-                <div className="sim-empty-title">Ready to Simulate</div>
-                <div className="sim-empty-sub">
-                  Select a city and scenario, then click <strong>Run Simulation</strong> to trigger the full ML pipeline.
-                </div>
-                <div className="sim-empty-steps">
-                  <div>1. Weather data is fetched from the partner API</div>
-                  <div>2. ML models run inference (risk, fraud, income, premium)</div>
-                  <div>3. Orchestrator checks eligibility & calculates payout</div>
-                  <div>4. Decision is rendered with full breakdown</div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* ── Right: Live Log ── */}
-          <div className="sim-log-panel">
-            <div className="sim-log-header">
-              <Activity size={13} /> Pipeline Log
-              {logs.length > 0 && <span className="sim-log-count">{logs.length} events</span>}
-            </div>
-            <div className="sim-log-body" ref={logRef}>
-              {logs.length === 0 ? (
-                <div className="sim-log-empty">Waiting for simulation...</div>
-              ) : (
-                logs.map((log, i) => (
-                  <div key={i} className={`sim-log-entry log-${log.type}`}>
-                    <span className="sim-log-ts">{log.ts}</span>
-                    <span className="sim-log-msg">{log.msg}</span>
-                  </div>
-                ))
               )}
             </div>
+
+            {/* ── Right: Live Log ── */}
+            <div className="sim-log-panel">
+              <div className="sim-log-header">
+                <Activity size={13} /> Pipeline Log
+                {logs.length > 0 && <span className="sim-log-count">{logs.length} events</span>}
+              </div>
+              <div className="sim-log-body" ref={logRef}>
+                {logs.length === 0 ? (
+                  <div className="sim-log-empty">Waiting for simulation...</div>
+                ) : (
+                  logs.map((log, i) => (
+                    <div key={i} className={`sim-log-entry log-${log.type}`}>
+                      <span className="sim-log-ts">{log.ts}</span>
+                      <span className="sim-log-msg">{log.msg}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
-        </div>
+        </>}
       </div>
     </div>
   );
@@ -593,6 +693,32 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
 
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
+}
+
+function getMockMarketIntel(city, scenario) {
+  const isCyc = scenario === "cyclone";
+  const isFlood = scenario === "flood";
+
+  return {
+    city,
+    overall_risk_level: isCyc ? "CRITICAL" : isFlood ? "HIGH" : "LOW",
+    combined_multiplier: isCyc ? 1.45 : isFlood ? 1.25 : 1.05,
+    r_weather: isCyc ? 1.3 : isFlood ? 1.15 : 1.0,
+    r_market: isCyc ? 1.15 : isFlood ? 1.1 : 1.05,
+    weather_condition: isCyc ? "cyclone" : isFlood ? "heavy rain" : "clear",
+    crawl_hazard_level: isCyc ? "HIGH" : isFlood ? "MEDIUM" : "LOW",
+    hazard_context: isCyc
+      ? "Cyclone warning in effect. Major road closures on OMR and ECR. Port operations suspended."
+      : isFlood
+        ? "Heavy waterlogging reported in Whitefield and Silk Board. Bengaluru traffic police issued advisory."
+        : "Normal market conditions. Minor traffic delays in central business district.",
+    tavily_answer: isCyc
+      ? "Active cyclone alerts for coastal regions. Local authorities have declared a public holiday. Deliveries are highly disrupted with 70% of outlets offline."
+      : isFlood
+        ? "Search reveals localized flooding in 4 major sectors. Strike activity noted by gig worker unions protesting unsafe working conditions in rain."
+        : "Current search results show no major protests or strikes. Road conditions are normal for Bengaluru/Chennai current peak hours.",
+    formula: "P_final = P_base x R_weather x R_market"
+  };
 }
 
 function renderMLPredictions(preds) {

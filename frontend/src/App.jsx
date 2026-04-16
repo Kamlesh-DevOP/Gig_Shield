@@ -1,20 +1,32 @@
 import { useState, useEffect, useMemo } from "react";
 import {
-  BrowserRouter, Routes, Route, Navigate, useNavigate, useParams
+  BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation
 } from "react-router-dom";
 import {
-  Shield, Zap, Gem, LogIn, ChevronRight, AlertTriangle,
+  Shield, Zap, Gem, LogIn, LogOut, ChevronRight, AlertTriangle,
   CloudRain, TrendingDown, CheckCircle, Clock,
   MapPin, Activity, Lock, CreditCard, Smartphone, Building2,
   Wallet, ArrowLeft, Star, Package, BarChart2, CircleDollarSign,
-  ShieldCheck, Radio, TriangleAlert, BadgeCheck, FileText, User,
+  ShieldCheck, Radio, TriangleAlert, BadgeCheck, FileText, User, Settings,
   CalendarDays, Banknote, AlertCircle, TrendingUp, Target, Percent,
   Satellite
 } from "lucide-react";
 import OnboardingPage from "./OnboardingPage";
 import SimulationPage from "./SimulationPage";
+import PolicyReviewPage from "./PolicyReviewPage";
+import PayoutSetupPage from "./PayoutSetupPage";
+import ProfileSettingsPage from "./ProfileSettingsPage";
 import { supabase } from "./supabaseClient";
 import './index.css';
+import FraudScoreCard from "./FraudScoreCard";
+import CoolingPeriodBar from "./CoolingPeriodBar";
+import NextWeekRiskBanner from "./NextWeekRiskBanner";
+import MarketStatsRow, { LivePayoutTicker } from "./MarketScaleStrip";
+import WhatIfCalculator from "./WhatIfCalculator";
+import WorkerComparisonTable from "./WorkerComparisonTable";
+import AIDecisionTrace from "./AIDecisionTrace";
+import { Calculator } from "lucide-react";
+import B2BPartnerPortal from "./B2BPartnerPortal";
 
 // ─── RICH MOCK DATA ───────────────────────────────────────────────────────────
 // All three partners: Slab 3 (Premium, 100% cover, 4% rate)
@@ -198,7 +210,11 @@ function computePricing(partner, overridePlanKey) {
   };
 }
 
-const fmt = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
+// Format numbers to Currency (INR) - Safe version
+const fmt = (n) => {
+  if (n === undefined || n === null || isNaN(n)) return "₹0";
+  return `₹${Number(n).toLocaleString("en-IN")}`;
+};
 const fmtK = (n) => n >= 1000 ? `₹${(n / 1000).toFixed(1)}K` : `₹${n}`;
 
 function rainLevel(cm) {
@@ -211,24 +227,40 @@ function rainLevel(cm) {
 
 
 // ─── SMALL HELPERS ────────────────────────────────────────────────────────────
-const Header = ({ partner, onLogout }) => (
-  <header className="hdr">
-    <div className="hdr-left" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <div className="hdr-logomark"><Shield size={15} /></div>
-      <span className="hdr-logoname">Gig Insurance Company</span>
-    </div>
-    <div className="hdr-right" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-        <span className="live-dot" />
-        <span className="hdr-zone-label">{partner.zone}</span>
+const Header = ({ partner, onLogout }) => {
+  const navigate = useNavigate();
+  return (
+    <header className="hdr">
+      <div className="hdr-left" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div className="hdr-logomark" style={{ cursor: "pointer" }} onClick={() => navigate("/dashboard")}><Shield size={15} /></div>
+        <span className="hdr-logoname" style={{ cursor: "pointer" }} onClick={() => navigate("/dashboard")}>Gig Insurance Company</span>
       </div>
-      <div className="hdr-avatar">{partner.avatar}</div>
-      <button onClick={onLogout} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(126,61,181,0.15)", border: "1px solid #7E3DB5", color: "#3B0764", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", letterSpacing: 0.2 }}>
-        <LogIn size={13} style={{ transform: "rotate(180deg)" }} /> Logout
-      </button>
-    </div>
-  </header>
-);
+      <div className="hdr-right" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <span className="live-dot" />
+          <span className="hdr-zone-label">{partner.zone}</span>
+        </div>
+        <div 
+          className="hdr-avatar" 
+          onClick={() => navigate("/profile")}
+          style={{ cursor: "pointer", transition: "all 0.2s", ":hover": { transform: "scale(1.05)" } }}
+          title="Account Settings"
+        >
+          {partner.avatar}
+        </div>
+        <button 
+          onClick={() => navigate("/profile")} 
+          style={{ background: "none", border: "none", padding: 5, cursor: "pointer", color: "var(--muted)", display: "flex", alignItems: "center" }}
+        >
+          <Settings size={16} />
+        </button>
+        <button onClick={onLogout} style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(126,61,181,0.15)", border: "1px solid #7E3DB5", color: "#3B0764", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", letterSpacing: 0.2 }}>
+          <LogOut size={13} /> Logout
+        </button>
+      </div>
+    </header>
+  );
+};
 
 // ─── LOGIN ───────────────────────────────────────────────────────────────────
 function LoginPage({ onLogin }) {
@@ -273,7 +305,7 @@ function LoginPage({ onLogin }) {
     console.log("Step 2: Fetching metrics from gigshield_workers for ID:", workerId);
     const { data: gsRecord, error: gsErr } = await supabase
       .from('gigshield_workers')
-      .select('record')
+      .select('record, payout_method, upi_id, bank_name, account_number, ifsc_code, account_holder')
       .eq('worker_id', workerId)
       .single();
 
@@ -358,6 +390,10 @@ function LoginPage({ onLogin }) {
       pastWeeklyPaid: Array(10).fill(true),
       pastWeeklyClaimed: Array(10).fill(false),
       currentWeekDays: currentWeekDays,
+      payout_method: gsRecord?.payout_method || null,
+      upi_id: gsRecord?.upi_id || null,
+      bank_name: gsRecord?.bank_name || null,
+      account_number: gsRecord?.account_number || null,
     };
 
     onLogin(newId);
@@ -381,17 +417,10 @@ function LoginPage({ onLogin }) {
           <p className="l-desc">
             Parametric insurance triggered automatically by rainfall data. No paperwork, no manual claims — your payout arrives the moment disruption is confirmed.
           </p>
+          <div style={{ marginTop: 24 }}><LivePayoutTicker /></div>
         </div>
         <div>
-          <div className="l-divider" />
-          <div className="l-stats">
-            {[["3,200+", "Partners Covered"], ["84L+", "Claims Paid"], ["91%", "Accuracy Rate"]].map(([v, l]) => (
-              <div key={l}>
-                <div className="l-stat-val">{v}</div>
-                <div className="l-stat-label">{l}</div>
-              </div>
-            ))}
-          </div>
+          <MarketStatsRow started={true} />
         </div>
       </div>
       <div className="l-form-side">
@@ -428,6 +457,13 @@ function LoginPage({ onLogin }) {
           <div className="l-hint" style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
             New to GIC?{" "}
             <span id="go-register" onClick={onRegister} style={{ color: "var(--purple)", fontWeight: 700, cursor: "pointer" }}>Register here →</span>
+          </div>
+
+          <div style={{ marginTop: 24, borderTop: "1px solid var(--border)", paddingTop: 20 }}>
+            <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12, textAlign: "center" }}>Are you a Platform Partner? (Zepto, Blinkit, Swiggy)</div>
+            <button className="btn-premium-outline" onClick={() => navigate("/b2b")} style={{ width: "100%" }}>
+              <Building2 size={16} /> Partner Integration Portal
+            </button>
           </div>
         </div>
       </div>
@@ -473,17 +509,12 @@ function EarningsChart({ partner, pricing }) {
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
-function Dashboard({ partnerId, evaluation, evalLoading, onLogout }) {
+function Dashboard({ partnerId, evaluation, evalLoading, onLogout, paidForNextWeek, onPayPremium, onViewClaim, onSimulate }) {
   const navigate = useNavigate();
   const partner = PARTNERS[partnerId];
   if (!partner) return null;
   const pricing = useMemo(() => computePricing(partner), [partner]);
   const tier = pricing.tier;
-
-  const onSelectPlan = () => navigate("/plans");
-  const onViewClaim = () => navigate("/claim");
-  const onPayPremium = () => navigate("/plans");
-  const onSimulate = () => navigate("/simulation");
 
   const hasPayout = evaluation?.decision === "APPROVE" || (evaluation?.payout_amount > 0);
 
@@ -491,6 +522,73 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout }) {
     <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column" }}>
       <Header partner={partner} onLogout={onLogout} />
       <div className="dash-body">
+
+        {/* Mandatory Payout Setup Alert */}
+        {!partner.payout_method && (
+          <div className="alert alert-red" style={{ 
+            background: "linear-gradient(135deg, #FEF2F2, #FFF1F1)", 
+            border: "1.5px solid var(--red-bdr)",
+            padding: "20px 24px",
+            boxShadow: "0 4px 15px rgba(185,28,28,0.08)"
+          }}>
+            <div className="alert-icon" style={{ 
+               width: "44px", height: "44px", borderRadius: "12px", 
+               background: "var(--red-bg)", color: "var(--red)",
+               display: "flex", alignItems: "center", justifyContent: "center"
+            }}>
+              <AlertCircle size={24} />
+            </div>
+            <div className="alert-body">
+              <div className="alert-title" style={{ color: "var(--red)", fontSize: "16px", fontWeight: 700 }}>Action Required: Setup Payout Account</div>
+              <div className="alert-desc" style={{ fontSize: "14px", color: "var(--muted)", maxWidth: "600px" }}>
+                Your parametric insurance protection is currently <strong>Inactive</strong>. We cannot process automated claims until you provide your payout details for instant rollout.
+              </div>
+            </div>
+            <button 
+              className="alert-btn" 
+              onClick={() => navigate("/payout-setup", { state: { form: { worker_id: partnerId.replace("DB", ""), ...partner } } })}
+              style={{ 
+                background: "var(--red)", color: "#fff", 
+                padding: "12px 24px", borderRadius: "10px",
+                display: "flex", alignItems: "center", gap: "8px"
+              }}
+            >
+              <Zap size={16} /> Setup Now
+            </button>
+          </div>
+        )}
+
+        {/* Real-Time Disruption Alert Banner (Sticky) */}
+        {evaluation && evaluation.overall_hazard_level !== "LOW" && (
+          <div className="sticky-banner" style={{
+            background: evaluation.overall_hazard_level === "CRITICAL" ? "linear-gradient(90deg, #ef4444, #b91c1c)" : "linear-gradient(90deg, #6366f1, #4338ca)",
+            color: "white", padding: "12px 24px", borderRadius: "16px", marginBottom: "24px",
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            boxShadow: "0 10px 25px rgba(0,0,0,0.1)", position: "sticky", top: "20px", zIndex: 100
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <div className="pulse-icon"><Radio size={20} /></div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "14px" }}>LIVE DISRUPTION: {evaluation.overall_hazard_level} RISK</div>
+                <div style={{ fontSize: "12px", opacity: 0.9 }}>
+                  {evaluation.weather?.condition_main || "Emergency"} active in {partner.city} · {evaluation.weather?.rainfall_1h_mm > 0 ? `${evaluation.weather.rainfall_1h_mm}mm rain` : (evaluation.hazard_type || "Sector Risk")} · Claim ready for rollout
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+              <div style={{ textAlign: "right", borderRight: "1px solid rgba(255,255,255,0.3)", paddingRight: "20px" }}>
+                <div style={{ fontSize: "10px", textTransform: "uppercase", opacity: 0.8 }}>Update in</div>
+                <div style={{ fontWeight: 700, fontFamily: "var(--mono)" }}>04:52</div>
+              </div>
+              <button onClick={onViewClaim} style={{ 
+                background: "white", color: evaluation.overall_hazard_level === "CRITICAL" ? "#ef4444" : "#6366f1",
+                border: "none", padding: "8px 16px", borderRadius: "8px", fontWeight: 700, fontSize: "13px", cursor: "pointer"
+              }}>
+                View Claim Analysis
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Welcome */}
         <div className="welcome-row">
@@ -501,6 +599,70 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout }) {
           <div className="plan-pill" style={{ borderColor: tier.accent, color: tier.accent, background: tier.accentPale }}>
             <span className="pill-dot" style={{ background: tier.accent }} />
             {tier.label} Plan Active
+          </div>
+        </div>
+
+        <NextWeekRiskBanner partner={partner} pricing={pricing} onPayPremium={onPayPremium} />
+        <CoolingPeriodBar partner={partner} pricing={pricing} />
+
+        {/* Top Row: Trust Score & Countdown */}
+        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "20px", marginBottom: "20px" }}>
+          {/* Trust Score Visualizer */}
+          <FraudScoreCard partner={partner} pricing={pricing} />
+
+          {/* Premium Countdown (Dynamic) */}
+          <div className="card" style={{ background: "linear-gradient(135deg, #2D0A4E 0%, #3B0764 100%)", color: "white" }}>
+            {(() => {
+              const now = new Date();
+              // Calculate days until next Monday (typical end of week)
+              const day = now.getDay(); // 0 (Sun) to 6 (Sat)
+              const daysToMonday = day === 0 ? 1 : 8 - day;
+              
+              // Mocking a 7-day cycle end date
+              const cycleEnd = new Date(now);
+              cycleEnd.setDate(now.getDate() + daysToMonday);
+              
+              const cycleStart = new Date(cycleEnd);
+              cycleStart.setDate(cycleEnd.getDate() - 7);
+
+              const fmtDate = (d) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+              const daysLeft = daysToMonday;
+              const dashOffset = (daysLeft / 7) * 125.6;
+
+              return (
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px" }}>
+                    <div>
+                      <div style={{ fontSize: "12px", opacity: 0.7, textTransform: "uppercase", letterSpacing: "1px" }}>Next Premium Due</div>
+                      <div style={{ fontSize: "28px", fontWeight: 700 }}>{daysLeft} {daysLeft === 1 ? "Day" : "Days"}</div>
+                    </div>
+                    <div style={{ width: "50px", height: "50px" }}>
+                      <svg width="50" height="50" viewBox="0 0 50 50">
+                         <circle cx="25" cy="25" r="20" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="4" />
+                         <circle cx="25" cy="25" r="20" fill="none" stroke={daysLeft <= 2 ? "#EF4444" : "#A78BFA"} strokeWidth="4" 
+                           strokeDasharray={`${dashOffset} 125.6`}
+                           strokeLinecap="round"
+                           transform="rotate(-90 25 25)"
+                         />
+                      </svg>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                    <div>
+                      <div style={{ fontSize: "12px", opacity: 0.7 }}>Coverage Period</div>
+                      <div style={{ fontSize: "14px", fontWeight: 500 }}>{fmtDate(cycleStart)} – {fmtDate(cycleEnd)}</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: "18px", fontWeight: 700 }}>{fmt(pricing.nextPremium)}</div>
+                      <button onClick={onPayPremium} style={{ 
+                        background: "rgba(255,255,255,0.15)", border: "none", color: "white", 
+                        padding: "4px 10px", borderRadius: "6px", fontSize: "11px", fontWeight: 600, marginTop: "6px", cursor: "pointer"
+                      }}>Pay Early</button>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
 
@@ -560,6 +722,39 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout }) {
             <div className="stat-sub">{pricing.defaults} defaults &nbsp;·&nbsp; {fmt(pricing.weeklyPremium)} premium/wk</div>
           </div>
         </div>
+
+        {/* Real-time Market Pulse (MCP Signals) */}
+        {evaluation?.mcp_risk_profile && (
+          <div className="card market-pulse-card" style={{ marginBottom: "20px", background: "linear-gradient(135deg, #F8FAFC, #EFF6FF)", border: "1px solid #DBEAFE" }}>
+            <div className="card-title" style={{ color: "#2563EB", marginBottom: "16px" }}>
+              <Radio size={13} strokeWidth={3} className={evaluation.overall_hazard_level !== "LOW" ? "pulse-icon" : ""} /> 
+              Real-Time Market Pulse — {partner.city}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "20px" }}>
+              <div className="pulse-item">
+                <div style={{ fontSize: "11px", color: "#64748B", textTransform: "uppercase", fontWeight: 600, marginBottom: "8px" }}>Search Intelligence</div>
+                <div style={{ fontSize: "13px", color: "#1E3A8A", fontStyle: "italic", lineHeight: 1.5 }}>
+                  "{evaluation.mcp_risk_profile.market_intel?.hazard_context || "No active search hazards detected."}"
+                </div>
+              </div>
+              <div className="pulse-item">
+                <div style={{ fontSize: "11px", color: "#64748B", textTransform: "uppercase", fontWeight: 600, marginBottom: "8px" }}>Live News Flags</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                   {evaluation.mcp_risk_profile.news_data?.disruption_flags?.map(f => (
+                     <span key={f} style={{ fontSize: "10px", background: "#DBEAFE", color: "#1E40AF", padding: "2px 8px", borderRadius: "10px", fontWeight: 600 }}>{f.toUpperCase()}</span>
+                   )) || <span style={{ fontSize: "12px", color: "#94A3B8" }}>Stable News Cycle</span>}
+                </div>
+              </div>
+              <div className="pulse-item" style={{ borderLeft: "1px solid #DBEAFE", paddingLeft: "20px" }}>
+                 <div style={{ fontSize: "11px", color: "#64748B", textTransform: "uppercase", fontWeight: 600, marginBottom: "8px" }}>Composite Risk</div>
+                 <div style={{ fontSize: "24px", fontWeight: 800, color: evaluation.overall_hazard_level === "CRITICAL" ? "#EF4444" : "#2563EB" }}>
+                    {evaluation.mcp_risk_profile.combined_multiplier?.toFixed(2)}x
+                 </div>
+                 <div style={{ fontSize: "10px", color: "#64748B", marginTop: "-2px" }}>Risk Multiplier Applied</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Plan detail + Chart */}
         <div className="two-col">
@@ -624,21 +819,51 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout }) {
               <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>Run a live weather scenario → ML pipeline → payout calculation using real backend endpoints</div>
             </div>
           </div>
-          <button className="sim-cta-btn" onClick={onSimulate}>
+          <button className="btn-premium" onClick={onSimulate}>
             <Satellite size={14} /> Run Simulation <ChevronRight size={14} />
           </button>
         </div>
 
-        {/* Pay bar */}
-        <div className="pay-bar">
-          <div>
-            <div className="pb-title">Renew Your {tier.label} Plan — Next Week</div>
-            <div className="pb-sub">Next premium: {fmt(pricing.nextPremium)} &nbsp;·&nbsp; Updated avg: {fmt(pricing.nextAvg)} &nbsp;·&nbsp; {pricing.nextTier.label} tier</div>
+        {/* What-If Calculator CTA */}
+        <div className="sim-cta-strip" style={{ marginTop: 16 }}>
+          <div className="sim-cta-left">
+            <div className="sim-cta-icon" style={{ background: "rgba(107, 45, 139, 0.1)" }}>
+              <Calculator size={22} color="#6B2D8B" />
+            </div>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--purple-dark)", letterSpacing: -0.2 }}>"What If" Premium Calculator</div>
+              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>Play with income, defaults, and slab settings to forecast logic</div>
+            </div>
           </div>
-          <button className="btn-light" onClick={onPayPremium}>
-            Pay Premium <ChevronRight size={15} />
+          <button className="btn-premium-outline" onClick={() => navigate("/calculator")}>
+            <Calculator size={14} /> Open Calculator <ChevronRight size={14} />
           </button>
         </div>
+
+        {/* Pay bar */}
+        {!paidForNextWeek && (
+          <div className="pay-bar">
+            <div>
+              <div className="pb-title">Renew Your {tier.label} Plan — Next Week</div>
+              <div className="pb-sub">Next premium: {fmt(pricing.nextPremium)} &nbsp;·&nbsp; Updated avg: {fmt(pricing.nextAvg)} &nbsp;·&nbsp; {tier.label} tier</div>
+            </div>
+            <button className="btn-premium" style={{ background: "#fff", color: "var(--purple-dark)" }} onClick={onPayPremium}>
+              Pay Premium <ChevronRight size={15} />
+            </button>
+          </div>
+        )}
+        
+        {paidForNextWeek && (
+          <div className="pay-bar" style={{ background: "rgba(16,185,129,0.05)", border: "1px solid var(--green-bdr)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "var(--green)" }}>
+              <CheckCircle size={20} />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "15px" }}>Premium Paid Successfully</div>
+                <div style={{ fontSize: "12px", opacity: 0.8 }}>Your coverage for next week is active and verified.</div>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
@@ -646,7 +871,7 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout }) {
 }
 
 // ─── PLAN SELECTOR ────────────────────────────────────────────────────────────
-function PlanSelector({ partnerId }) {
+function PlanSelector({ partnerId, onPaymentSuccess }) {
   const navigate = useNavigate();
   const partner = PARTNERS[partnerId];
   if (!partner) return null;
@@ -654,7 +879,44 @@ function PlanSelector({ partnerId }) {
   const pricing = useMemo(() => computePricing(partner, selected), [partner, selected]);
 
   const onBack = () => navigate("/dashboard");
-  const onPay = (k) => navigate(`/payment/${k}`);
+  
+  const onPay = (selectedPlanKey) => {
+    const planPricing = computePricing(partner, selectedPlanKey);
+    const premiumAmount = planPricing.nextPremium;
+    const rzpKey = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_demo_key";
+
+    if (!import.meta.env.VITE_RAZORPAY_KEY_ID) {
+      if (confirm(`[DEMO MODE] No Razorpay Key found.\n\nSimulate payment of ₹${premiumAmount} for ${selectedPlanKey} plan?`)) {
+        onPaymentSuccess(); // Signal payment success
+        navigate(`/success/${selectedPlanKey}`);
+      }
+      return;
+    }
+
+    const options = {
+      key: rzpKey,
+      amount: premiumAmount * 100,
+      currency: "INR",
+      name: "Gig Shield",
+      description: `${selectedPlanKey.toUpperCase()} Plan Premium`,
+      handler: function (response) {
+        onPaymentSuccess(); // Signal payment success
+        navigate(`/success/${selectedPlanKey}`);
+      },
+      prefill: {
+        name: partner.name,
+      },
+      theme: {
+        color: "#3B0764"
+      }
+    };
+    
+    if (window.Razorpay) {
+      new window.Razorpay(options).open();
+    } else {
+      alert("Razorpay SDK failed to load.");
+    }
+  };
 
   const planMeta = [
     { key: "basic", Icon: Shield },
@@ -720,55 +982,109 @@ function PlanSelector({ partnerId }) {
         </div>
       </div>
 
-      <div className="plan-grid">
-        {planMeta.map(({ key, Icon }) => {
-          const t = TIERS[key];
-          // Plan cards show next week's premium (updated rolling avg after this week's lower earning)
-          const tempPricing = computePricing(partner, key);
-          const premium = tempPricing.nextPremium;
-          const isSelected = selected === key;
-          const isCurrent = partner.chosenPlan === key;
-          const tabClass = isCurrent ? "plan-tab tab-current" : isSelected ? "plan-tab tab-active" : "plan-tab";
-          return (
-            <div key={key} className="plan-slot" onClick={() => setSelected(key)}>
-              <div className={tabClass} style={isSelected && !isCurrent ? { borderColor: t.accent, color: t.accent } : {}}>
-                {t.tabLabel}
-              </div>
-              <div className={`plan-card${isSelected ? " card-active" : ""}`} style={isSelected ? { borderColor: t.accent } : {}}>
-                <div className="plan-accent-line" style={{ background: t.accent }} />
-                <div className="plan-icon-wrap" style={{ background: t.accentPale }}>
-                  <Icon size={22} color={t.accent} />
+      <WorkerComparisonTable />
+
+      {/* ── SaaS Style Pricing Cards ── */}
+      <div style={{ maxWidth: 1040, margin: "0 auto", marginTop: "40px", marginBottom: "60px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "24px" }}>
+          {planMeta.map(({ key }) => {
+            const tierInfo = TIERS[key];
+            const planPricing = computePricing(partner, key);
+            const isSelected = selected === key;
+            return (
+              <div 
+                key={key} 
+                className="glass-card plan-card"
+                style={{
+                  background: isSelected ? "rgba(255, 255, 255, 0.85)" : "rgba(255, 255, 255, 0.45)",
+                  backdropFilter: "blur(16px)",
+                  border: isSelected ? `2px solid ${tierInfo.accent}` : "1px solid rgba(255, 255, 255, 0.7)",
+                  borderRadius: "16px",
+                  padding: "24px 20px",
+                  position: "relative",
+                  boxShadow: isSelected ? "0 15px 35px rgba(0,0,0,0.06)" : "0 4px 12px rgba(0,0,0,0.02)",
+                  transition: "all 0.3s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  cursor: "pointer",
+                  transform: isSelected ? "scale(1.02) translateY(-4px)" : "scale(1)",
+                  zIndex: isSelected ? 2 : 1
+                }}
+                onClick={() => setSelected(key)}
+              >
+                {isSelected && (
+                  <div style={{
+                    position: "absolute", top: "-12px", left: "50%", transform: "translateX(-50%)",
+                    background: tierInfo.accent, color: "#fff", fontSize: "10px", fontWeight: 700,
+                    padding: "4px 14px", borderRadius: "20px", letterSpacing: "1px", textTransform: "uppercase",
+                    boxShadow: "0 4px 10px rgba(0,0,0,0.15)"
+                  }}>
+                    Selected Slab
+                  </div>
+                )}
+                
+                <div style={{ textAlign: "center", marginBottom: "16px" }}>
+                  <div style={{ fontSize: "16px", fontWeight: 800, color: tierInfo.accent, textTransform: "uppercase", letterSpacing: "0.5px" }}>{tierInfo.label}</div>
+                  <div style={{ fontSize: "11px", color: "var(--muted)", marginTop: "2px" }}>{tierInfo.tabLabel}</div>
                 </div>
-                <div className="plan-name" style={{ color: isSelected ? t.accent : "var(--purple-dark)" }}>{t.label}</div>
-                <div className="plan-rate">{(t.rate * 100).toFixed(1)}% of weekly average income</div>
-                <div className="plan-price" style={{ color: isSelected ? t.accent : "var(--text)" }}>{fmt(premium)}</div>
-                <div className="plan-per">per week</div>
-                <div className="plan-div" />
-                <ul className="plan-feat">
-                  {[
-                    `${(t.cover * 100).toFixed(0)}% of income loss covered`,
-                    "Auto-triggers on disruption events",
-                    "75% income threshold",
-                    "Auto-credit — no claim form",
-                  ].map(f => (
-                    <li key={f}><CheckCircle size={13} color={t.accent} style={{ flexShrink: 0 }} /> {f}</li>
-                  ))}
-                </ul>
-                <button
+
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "baseline", marginBottom: "4px" }}>
+                  <span style={{ fontSize: "28px", fontWeight: 800, color: "var(--purple-dark)", fontFamily: "var(--mono)", letterSpacing: "-1px" }}>{fmt(planPricing.nextPremium)}</span>
+                  <span style={{ fontSize: "13px", color: "var(--muted)", marginLeft: "4px" }}>/week</span>
+                </div>
+                <div style={{ textAlign: "center", fontSize: "11px", color: "var(--muted)", marginBottom: "20px" }}>
+                  Based on {fmt(pricing.nextAvg)} 52-week avg
+                </div>
+
+                <div style={{ background: "rgba(255, 255, 255, 0.5)", border: "1px solid rgba(255, 255, 255, 0.8)", borderRadius: "10px", padding: "12px", marginBottom: "20px" }}>
+                  <div style={{ fontSize: "10px", color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>Max Weekly Coverage</div>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+                    <div style={{ fontSize: "24px", fontWeight: 700, color: "var(--purple-dark)" }}>{(tierInfo.cover * 100).toFixed(0)}%</div>
+                    <div style={{ fontSize: "11px", color: "var(--text2)" }}>of loss via <strong style={{ color: "var(--purple-dark)" }}>{(tierInfo.rate * 100).toFixed(1)}%</strong> rate</div>
+                  </div>
+                </div>
+
+                <div style={{ flex: 1, padding: "0 4px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", fontSize: "12px", color: "var(--text2)", fontWeight: 500 }}>
+                    <CheckCircle size={14} color="var(--green)" /> No Claim Form Needed
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", fontSize: "12px", color: "var(--text2)", fontWeight: 500 }}>
+                    <CheckCircle size={14} color="var(--green)" /> Instant Payouts (UPI)
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", fontSize: "12px", color: "var(--text2)", fontWeight: 500 }}>
+                    <CheckCircle size={14} color="var(--green)" /> LangGraph Truth Verification
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", fontSize: "12px", color: "var(--text2)", fontWeight: 500 }}>
+                    <CheckCircle size={14} color="var(--green)" /> Societal / Tech Disruptions
+                  </div>
+                </div>
+
+                <div style={{ 
+                  textAlign: "center", fontSize: "11px", fontWeight: 700, color: "var(--purple)", 
+                  padding: "10px 0", background: `${tierInfo.accent}15`, borderRadius: "6px", marginBottom: "16px",
+                  border: `1px dashed ${tierInfo.accent}40`
+                }}>
+                  Weather Trigger ≥ 10cm rainfall
+                </div>
+
+                <button 
                   className="plan-btn"
-                  style={{
-                    background: isSelected ? t.accent : "transparent",
-                    color: isSelected ? "#fff" : t.accent,
-                    borderColor: t.accent,
+                  onClick={(e) => { e.stopPropagation(); onPay(key); }}
+                  style={{ 
+                    background: isSelected ? tierInfo.accent : "var(--surface)", 
+                    color: isSelected ? "#fff" : "var(--purple)", 
+                    border: isSelected ? "none" : "1px solid var(--purple-lt)",
+                    width: "100%", height: "42px", fontSize: "14px", fontWeight: 700, borderRadius: "8px",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                    transition: "all 0.2s"
                   }}
-                  onClick={e => { e.stopPropagation(); setSelected(key); onPay(key); }}
                 >
-                  {isCurrent ? "Renew Plan" : "Select Plan"} <ChevronRight size={15} />
+                  Activate {tierInfo.label} <ChevronRight size={14} />
                 </button>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -934,16 +1250,41 @@ function PaymentSuccess({ partnerId }) {
   );
 }
 
-// ─── RICH CLAIM DETAIL VIEW ───────────────────────────────────────────────────
-function ClaimDetailView({ partnerId, evaluation, evalLoading }) {
+
+function ClaimDetailView({ partnerId, evaluation, evalLoading, paidForNextWeek, onPayPremium }) {
   const navigate = useNavigate();
   const partner = PARTNERS[partnerId];
   if (!partner) return null;
   const pricing = useMemo(() => computePricing(partner), [partner]);
   const p = pricing;
 
+  const [calcStep, setCalcStep] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const steps = [
+    { label: "10-Week Rolling Avg", val: fmt(p.avg), icon: <BarChart2 size={16} /> },
+    { label: "75% Income Threshold", val: fmt(p.threshold), icon: <Target size={16} /> },
+    { label: "Actual Earnings (this week)", val: fmt(p.currentEarning), icon: <Banknote size={16} />, highlight: p.currentEarning < p.threshold },
+    { label: "Income Loss Gap", val: fmt(p.loss), icon: <TrendingDown size={16} />, highlight: p.loss > 0 },
+    { label: "Rain Trigger Adjustment", val: `${(p.rainCovPct * 100).toFixed(0)}%`, icon: <CloudRain size={16} /> },
+    { label: "Final Parametric Payout", val: fmt(p.payout), icon: <ShieldCheck size={16} />, highlight: p.payout > 0, finished: true },
+  ];
+
   const onBack = () => navigate("/dashboard");
-  const onPayPremium = () => navigate("/plans");
+  
+  const playStory = () => {
+    setIsPlaying(true);
+    setCalcStep(0);
+    const interval = setInterval(() => {
+      setCalcStep(prev => {
+        if (prev >= steps.length - 1) {
+          clearInterval(interval);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 1200);
+  };
 
   return (
     <div className="claim-page">
@@ -951,6 +1292,14 @@ function ClaimDetailView({ partnerId, evaluation, evalLoading }) {
         <button className="back-btn" onClick={onBack} style={{ marginBottom: 20 }}>
           <ArrowLeft size={16} /> Back to Dashboard
         </button>
+
+        {evalLoading && (
+          <div className="section-card" style={{ textAlign: "center", padding: "40px", animation: "pulse 2s infinite", border: "1px solid var(--purple-lt)" }}>
+            <div className="spin" style={{ marginBottom: "20px" }}><Zap size={30} color="var(--purple)" /></div>
+            <div style={{ fontWeight: 700, color: "var(--purple-dark)" }}>AI Orchestrator is Thinking...</div>
+            <div style={{ fontSize: "13px", color: "var(--muted)" }}>Analyzing telemetry data through LangGraph node...</div>
+          </div>
+        )}
 
         {/* Hero */}
         <div className="claim-hero">
@@ -972,7 +1321,7 @@ function ClaimDetailView({ partnerId, evaluation, evalLoading }) {
         </div>
 
         {/* Backend Eligibility Snapshot */}
-        {evaluation && (
+        {evaluation && !evalLoading && (
           <div className="section-card" style={{ borderLeft: `4px solid ${evaluation.decision === 'APPROVE' ? 'var(--green)' : 'var(--red)'}` }}>
             <div className="section-title">ML Orchestrator — Eligibility Snapshot</div>
             <div className="section-sub">Real-time breakdown from the backend LangGraph engine</div>
@@ -987,13 +1336,24 @@ function ClaimDetailView({ partnerId, evaluation, evalLoading }) {
               </div>
               <div style={{ padding: 12, borderRadius: 8, background: "var(--surface2)" }}>
                 <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase" }}>Confidence Score</div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>{Math.round(evaluation.confidence * 100)}%</div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>{Math.round((evaluation.confidence || 0) * 100)}%</div>
               </div>
               <div style={{ padding: 12, borderRadius: 8, background: "var(--surface2)" }}>
                 <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase" }}>Inference Time</div>
                 <div style={{ fontSize: 18, fontWeight: 700 }}>{evaluation.processing_time_ms} ms</div>
               </div>
             </div>
+            {(!evaluation.decision || evaluation.status === "error") && (
+              <div style={{ marginTop: 20, padding: 16, borderRadius: 12, background: "var(--red-bg)", border: "1px solid var(--red-bdr)" }}>
+                <div style={{ fontSize: "13px", color: "var(--red)", fontWeight: 700 }}>
+                  <AlertTriangle size={14} style={{ display: "inline", marginRight: 5 }} /> 
+                  AI Orchestrator Unavailable (Rate Limit Reached)
+                </div>
+                <div style={{ fontSize: "12px", color: "var(--red)", opacity: 0.8, marginTop: 4 }}>
+                   The multi-agent system is currently throttled by the Groq API providers. Please wait a minute or check your Groq API Key quota.
+                </div>
+              </div>
+            )}
             {evaluation.eligibility_snapshot && (
               <div style={{ marginTop: 20, padding: 16, borderRadius: 12, background: "var(--purple-pale)", border: "1px solid var(--purple-lt)" }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "var(--purple-dark)", marginBottom: 8 }}>Reasoning Breakdown:</div>
@@ -1007,6 +1367,8 @@ function ClaimDetailView({ partnerId, evaluation, evalLoading }) {
             )}
           </div>
         )}
+
+        <AIDecisionTrace evaluation={evaluation} pricing={pricing} partner={partner} />
 
         {/* 1. Daily Breakdown */}
         <div className="section-card">
@@ -1053,70 +1415,63 @@ function ClaimDetailView({ partnerId, evaluation, evalLoading }) {
           )}
         </div>
 
-        {/* 2. Claim Calculation */}
+        {/* 2. Interactive XAI Story Calculation */}
         <div className="section-card">
-          <div className="section-title">This Week's Claim Calculation</div>
-          <div className="section-sub">
-            {p.defaults > 0
-              ? `Prior defaulter — ${p.defaults} missed payments · ${(p.defaultFinePct * 100).toFixed(0)}% fine on coverable loss`
-              : p.isNonDefaulter
-                ? "Non-defaulter — 52-week clean record · +13% loyalty coverage reward"
-                : p.isNewCustomer ? "New customer — no prior payment history, no penalty or reward applies"
-                  : "Normal condition — no defaults, no penalty, no reward"}
+          <div className="section-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>Animated Calculation Breakdown (XAI)</span>
+            <button className="btn-text-only" onClick={playStory} style={{ fontSize: 13, color: "var(--purple)", fontWeight: 700 }}>
+              <Zap size={14} /> Replay Story
+            </button>
           </div>
-          <div className="calc-grid-3">
-            {[
-              { Icon: BarChart2, label: "Weekly Avg Income (52-wk basis)", val: fmt(p.avg), red: false, dark: false },
-              { Icon: Percent, label: `Plan: Slab 3 — Premium (${(p.tier.rate * 100).toFixed(1)}% of avg)`, val: fmt(p.planPremium), red: false, dark: false },
-              { Icon: AlertCircle, label: `Default Penalty (2% × ${p.defaults} wks)`, val: p.isNewCustomer ? "N/A — new customer" : p.defaults > 0 ? `+${fmt(p.defaultPenaltyAmt)}` : "None", red: p.defaults > 0, dark: false },
-              { Icon: Star, label: "Loyalty Reward (52-wk non-defaulter)", val: p.isNewCustomer ? "N/A — new customer" : p.loyaltyRewardAmt > 0 ? `−${fmt(p.loyaltyRewardAmt)}` : "None", red: false, dark: false },
-              { Icon: Banknote, label: "Net Weekly Premium", val: fmt(p.weeklyPremium), red: false, dark: false },
-              { Icon: Target, label: "Threshold (75% of ₹8,000)", val: fmt(p.threshold), red: false, dark: false },
-              { Icon: Banknote, label: "Actual Weekly Earning", val: fmt(p.currentEarning), red: p.currentEarning < p.threshold, dark: false },
-              { Icon: TrendingDown, label: "Net Coverable Loss", val: fmt(p.loss), red: p.loss > 0, dark: false },
-              { Icon: CloudRain, label: `Rain: ${p.maxRainfall}cm → ${(p.rainCovPct * 100).toFixed(0)}% coverage`, val: `${(p.rainCovPct * 100).toFixed(0)}% of loss`, red: false, dark: false },
-              { Icon: AlertCircle, label: `Default Fine: −${(p.defaultFinePct * 100).toFixed(0)}% on loss`, val: p.defaults > 0 ? `${fmt(p.loss)} × ${(1 - p.defaultFinePct).toFixed(2)} = ${fmt(Math.round(p.loss * (1 - p.defaultFinePct)))}` : "None", red: p.defaults > 0, dark: false },
-              { Icon: Star, label: `Loyalty Bonus: +${(p.loyaltyCoveragePct * 100).toFixed(0)}% on loss`, val: p.loyaltyCoveragePct > 0 ? `${fmt(p.loss)} × ${(1 + p.loyaltyCoveragePct).toFixed(2)} = ${fmt(p.netCoverableLoss)}` : "None", red: false, dark: false },
-              { Icon: ShieldCheck, label: "Net Coverable Loss (after adjustment)", val: fmt(p.netCoverableLoss), red: false, dark: false },
-              { Icon: ShieldCheck, label: "Plan Cover: 100% (Slab 3)", val: `100% × ${fmt(p.netCoverableLoss)} = ${fmt(p.netCoverableLoss)}`, red: false, dark: false },
-              { Icon: CircleDollarSign, label: "Auto Roll-out Payout", val: fmt(p.payout), red: false, dark: p.payout > 0 },
-            ].map(({ Icon, label, val, red, dark }) => (
-              <div key={label} className={`claim-cell${red ? " red" : ""}${dark ? " dark" : ""}`}>
-                <div className="claim-cell-icon">
-                  <Icon size={16} color={dark ? "#C4A8E0" : red ? "var(--red)" : "var(--purple-lt)"} />
+          <div className="calc-story-container" style={{ marginTop: 20 }}>
+            <div className="story-steps">
+              {steps.map((s, i) => (
+                <div key={i} className={`story-step ${calcStep >= i ? "visible" : ""} ${s.highlight ? "highlight" : ""} ${s.finished && calcStep === i ? "pulse" : ""}`} 
+                     style={{ opacity: calcStep >= i ? 1 : 0.2, transform: calcStep >= i ? "translateX(0)" : "translateX(-10px)", transition: "all 0.5s ease" }}>
+                  <div className="step-circle">{s.icon}</div>
+                  <div className="step-info">
+                    <div className="step-label">{s.label}</div>
+                    <div className="step-val">{s.val}</div>
+                  </div>
+                  {i < steps.length - 1 && <div className="step-connector" />}
                 </div>
-                <div className="claim-cell-label">{label}</div>
-                <div className="claim-cell-val">{val}</div>
+              ))}
+            </div>
+            {calcStep === steps.length - 1 && p.payout > 0 && (
+              <div className="claim-approved-badge" style={{ marginTop: 30, animation: "slide-up 0.4s ease forwards" }}>
+                <CheckCircle size={20} /> Instant Roll-out Verified: <strong>{fmt(p.payout)} credited to ending {partner.bankId}</strong>
               </div>
-            ))}
+            )}
           </div>
 
-          {p.claimTriggered ? (
-            <div className="claim-trigger-banner">
-              <div>
-                <div className="ctb-label">Claim Auto-Triggered — Automatic Roll-out</div>
-                <div className="ctb-desc">
-                  Loss {fmt(p.loss)}
-                  {p.defaults > 0 && ` → after ${(p.defaultFinePct * 100).toFixed(0)}% default fine → ₹${Math.round(p.loss * (1 - p.defaultFinePct)).toLocaleString("en-IN")}`}
-                  {p.loyaltyCoveragePct > 0 && ` → +${(p.loyaltyCoveragePct * 100).toFixed(0)}% loyalty → ${fmt(p.netCoverableLoss)}`}
-                  {` → × ${(p.rainCovPct * 100).toFixed(0)}% rain (${p.maxRainfall}cm) × 100% plan cover = `}
-                  <strong>{fmt(p.payout)}</strong>
+          <div style={{ marginTop: 30 }}>
+            {p.claimTriggered ? (
+              <div className="claim-trigger-banner">
+                <div>
+                  <div className="ctb-label">Claim Auto-Triggered — Automatic Roll-out</div>
+                  <div className="ctb-desc">
+                    Loss {fmt(p.loss)}
+                    {p.defaults > 0 && ` → after ${(p.defaultFinePct * 100).toFixed(0)}% default fine → ₹${Math.round(p.loss * (1 - p.defaultFinePct)).toLocaleString("en-IN")}`}
+                    {p.loyaltyCoveragePct > 0 && ` → +${(p.loyaltyCoveragePct * 100).toFixed(0)}% loyalty → ${fmt(p.netCoverableLoss)}`}
+                    {` → × ${(p.rainCovPct * 100).toFixed(0)}% rain (${p.maxRainfall}cm) × 100% plan cover = `}
+                    <strong>{fmt(p.payout)}</strong>
+                  </div>
+                  <div className="ctb-bank">Will be credited to {partner.bankId} within 48 hours</div>
                 </div>
-                <div className="ctb-bank">Will be credited to {partner.bankId} within 48 hours</div>
+                <div>
+                  <div className="ctb-amount-label">Payout Amount</div>
+                  <div className="ctb-amount">{fmt(p.payout)}</div>
+                </div>
               </div>
-              <div>
-                <div className="ctb-amount-label">Payout Amount</div>
-                <div className="ctb-amount">{fmt(p.payout)}</div>
+            ) : (
+              <div className="no-claim-box">
+                <CheckCircle size={16} color="var(--green)" />
+                Earnings above threshold this week — no claim triggered.
               </div>
-            </div>
-          ) : (
-            <div className="no-claim-box">
-              <CheckCircle size={16} color="var(--green)" />
-              Earnings above threshold this week — no claim triggered.
-            </div>
-          )}
+            )}
+          </div>
 
-          <div className="ref-box">
+          <div className="ref-box" style={{ marginTop: 24 }}>
             <div className="ref-title">Judge Reference — All Three Scenarios (Slab 3 · avg ₹8,000 · 15cm rain · loss ₹1,500)</div>
             <div className="ref-text">
               <strong>Eg1 – Normal/New Customer (Z001):</strong> Slab 3 = 4.8% → Premium ₹384 · No history · Loss ₹1,500 · 15cm rain→80% · 100% cover → <strong>Payout = ₹1,200</strong><br />
@@ -1126,61 +1481,39 @@ function ClaimDetailView({ partnerId, evaluation, evalLoading }) {
           </div>
         </div>
 
-        {/* 3. Payment History */}
+        {/* 3. Rewards & Penalties Timeline (52-Week Dot View) */}
         <div className="section-card">
-          <div className="section-title">Payment History — Past 10 Weeks</div>
-          <div style={{ overflowX: "auto" }}>
-            <table className="history-table">
-              <thead>
-                <tr>
-                  {["Week", "Earnings", "Premium Paid", "Claimed"].map(h => (
-                    <th key={h}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {partner.pastWeeklyEarnings.map((e, i) => (
-                  <tr key={i}>
-                    <td style={{ fontWeight: 700, color: "var(--purple-dark)" }}>W{i + 1}</td>
-                    <td style={{ fontFamily: "var(--mono)", fontWeight: 500 }}>{fmt(e)}</td>
-                    <td>
-                      {partner.pastWeeklyPaid[i] === null
-                        ? <span style={{ color: "var(--muted)", fontSize: 13 }}>N/A</span>
-                        : partner.pastWeeklyPaid[i]
-                          ? <span className="history-badge" style={{ color: "var(--green)", background: "var(--green-bg)", borderColor: "var(--green-bdr)" }}><CheckCircle size={11} /> Paid</span>
-                          : <span className="history-badge" style={{ color: "var(--red)", background: "var(--red-bg)", borderColor: "var(--red-bdr)" }}><AlertCircle size={11} /> Default</span>
-                      }
-                    </td>
-                    <td>
-                      {partner.pastWeeklyClaimed[i] ? (
-                        <span className="history-badge" style={{
-                          color: "var(--purple)", background: "var(--purple-pale)", borderColor: "var(--purple-lt)",
-                        }}><CloudRain size={11} /> Claimed</span>
-                      ) : (
-                        <span style={{ color: "var(--muted)", fontSize: 13 }}>—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="section-title">52-Week Payment & Loyalty Timeline</div>
+          <div className="section-sub">Visualization of your consistent contributions and automated claims</div>
+          <div className="timeline-dots-container" style={{ padding: "30px 0" }}>
+            <div className="dots-grid" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {Array.from({ length: 52 }).map((_, i) => {
+                const isRecent = i < 10;
+                const status = isRecent 
+                  ? (partner.pastWeeklyPaid[i] ? (partner.pastWeeklyClaimed[i] ? "claimed" : "paid") : "defaulted")
+                  : (Math.random() > 0.05 ? "paid" : "defaulted"); // Mocking history
+                
+                const dotColor = status === "claimed" ? "#FBBF24" : status === "paid" ? "#10B981" : "#EF4444";
+                
+                return (
+                  <div key={i} className="timeline-dot-wrap" style={{ position: "relative" }}>
+                    <div className="timeline-dot" style={{ 
+                      width: 12, height: 12, borderRadius: "50%", background: dotColor,
+                      cursor: "pointer", transition: "transform 0.2s"
+                    }} />
+                  </div>
+                );
+              })}
+            </div>
           </div>
           <div className="history-footer">
-            <span>Defaults: <strong style={{ color: p.defaults > 0 ? "var(--red)" : "var(--green)" }}>{p.isNewCustomer ? "N/A" : p.defaults}</strong></span>
-            <span>Claims filed: <strong style={{ color: "var(--purple)" }}>{p.claims}</strong></span>
-            {p.isNewCustomer
-              ? <span style={{ color: "var(--muted)", fontSize: 13 }}>New customer — no payment history yet</span>
-              : p.defaults > 0
-                ? <><span>Premium penalty: <strong style={{ color: "var(--red)" }}>+{fmt(p.defaultPenaltyAmt)}</strong></span>
-                  <span>Loss fine: <strong style={{ color: "var(--red)" }}>−{(p.defaultFinePct * 100).toFixed(0)}% on coverable loss</strong></span></>
-                : <><span>Loyalty reward: <strong style={{ color: "var(--green)" }}>−{fmt(p.loyaltyRewardAmt)} on premium</strong></span>
-                  <span>Coverage bonus: <strong style={{ color: "var(--green)" }}>+{(p.loyaltyCoveragePct * 100).toFixed(0)}% on coverable loss</strong></span></>
-            }
+            <span>Legend: <span className="dot" style={{ background: "#10B981" }} /> Paid &nbsp;·&nbsp; <span className="dot" style={{ background: "#EF4444" }} /> Default &nbsp;·&nbsp; <span className="dot" style={{ background: "#FBBF24" }} /> Claim Paid</span>
+            <span>Loyalty Tier: <strong style={{ color: "var(--green)" }}>Diamond (52-wk non-defaulter)</strong></span>
           </div>
         </div>
 
         {/* 4. Next Week CTA */}
-        <div className="next-week-bar">
+        <div className="next-week-bar" style={{ marginTop: 20 }}>
           <div>
             <div className="nw-label">Next Week Premium Due · 16–22 Jun 2025</div>
             <div className="nw-premium">{fmt(p.nextPremium)}</div>
@@ -1188,11 +1521,17 @@ function ClaimDetailView({ partnerId, evaluation, evalLoading }) {
               {p.nextTier.label} plan (Slab 3) · Updated avg: {fmt(p.nextAvg)} &nbsp;·&nbsp; {(p.nextTier.rate * 100).toFixed(0)}% rate
             </div>
           </div>
-          <button className="btn-nw" onClick={onPayPremium}>
-            Pay Next Week →
-          </button>
+          {!paidForNextWeek && (
+            <button className="btn-nw" onClick={onPayPremium}>
+              Pay Next Week →
+            </button>
+          )}
+          {paidForNextWeek && (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--green)", fontWeight: 700, fontSize: "13px" }}>
+              <BadgeCheck size={18} /> COVERED
+            </div>
+          )}
         </div>
-
 
       </div>
     </div>
@@ -1202,6 +1541,46 @@ function ClaimDetailView({ partnerId, evaluation, evalLoading }) {
 // ─── PRIVATE ROUTE ────────────────────────────────────────────────────────────
 function PrivateRoute({ children, partnerId }) {
   return partnerId ? children : <Navigate to="/" replace />;
+}
+
+function PolicyReviewRoute({ onConfirm }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const formData = location.state?.form;
+
+  if (!formData) {
+    return <Navigate to="/" replace />;
+  }
+
+  return (
+    <PolicyReviewPage
+      workerData={formData}
+      onConfirm={(slab) => navigate("/payout-setup", { state: { form: formData, slab } })}
+      onBack={() => navigate("/register")}
+    />
+  );
+}
+
+function PayoutSetupRoute() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const formData = location.state?.form;
+  const slab = location.state?.slab;
+
+  if (!formData) {
+    return <Navigate to="/" replace />;
+  }
+
+  return (
+    <PayoutSetupPage
+      workerId={formData.worker_id}
+      onComplete={() => {
+        console.log("Onboarding fully complete!");
+        navigate("/");
+      }}
+      onBack={() => navigate("/policy-review", { state: { form: formData } })}
+    />
+  );
 }
 
 // ─── APP CONTENT ─────────────────────────────────────────────────────────────
@@ -1224,6 +1603,7 @@ function AppContent() {
   });
   const [evaluation, setEvaluation] = useState(null);
   const [evalLoading, setEvalLoading] = useState(false);
+  const [paidForNextWeek, setPaidForNextWeek] = useState(false);
 
   // Sync partnerId changes to localStorage
   useEffect(() => {
@@ -1239,7 +1619,7 @@ function AppContent() {
     if (partnerId && PARTNERS[partnerId]?.dbRecord) {
       setEvalLoading(true);
       const partner = PARTNERS[partnerId];
-      fetch("http://localhost:8001/api/evaluate_worker", {
+      fetch("http://localhost:8000/api/evaluate_worker", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1261,8 +1641,13 @@ function AppContent() {
     }
   }, [partnerId]);
 
+  const onPayPremium = () => navigate("/plans");
+  const onViewClaim = () => navigate("/claim");
+  const onSimulate = () => navigate("/simulation");
+
   const handleLogin = (id) => {
     setPartnerId(id);
+    setPaidForNextWeek(false); // Reset on login
     // Persist dynamic partner data if applicable
     if (id.startsWith("DB") && PARTNERS[id]) {
       localStorage.setItem(`gic_partner_data_${id}`, JSON.stringify(PARTNERS[id]));
@@ -1289,18 +1674,25 @@ function AppContent() {
         {/* Protected Routes */}
         <Route path="/dashboard" element={
           <PrivateRoute partnerId={partnerId}>
-            <Dashboard
-              partnerId={partnerId}
-              evaluation={evaluation}
-              evalLoading={evalLoading}
+            <Dashboard 
+              partnerId={partnerId} 
+              evaluation={evaluation} 
+              evalLoading={evalLoading} 
               onLogout={handleLogout}
+              paidForNextWeek={paidForNextWeek}
+              onPayPremium={onPayPremium}
+              onViewClaim={onViewClaim}
+              onSimulate={onSimulate}
             />
           </PrivateRoute>
         } />
 
         <Route path="/plans" element={
           <PrivateRoute partnerId={partnerId}>
-            <PlanSelector partnerId={partnerId} />
+            <PlanSelector 
+              partnerId={partnerId} 
+              onPaymentSuccess={() => setPaidForNextWeek(true)}
+            />
           </PrivateRoute>
         } />
 
@@ -1322,7 +1714,15 @@ function AppContent() {
               partnerId={partnerId}
               evaluation={evaluation}
               evalLoading={evalLoading}
+              paidForNextWeek={paidForNextWeek}
+              onPayPremium={onPayPremium}
             />
+          </PrivateRoute>
+        } />
+
+        <Route path="/calculator" element={
+          <PrivateRoute partnerId={partnerId}>
+            <WhatIfCalculator onBack={() => navigate("/dashboard")} />
           </PrivateRoute>
         } />
 
@@ -1335,6 +1735,27 @@ function AppContent() {
             />
           </PrivateRoute>
         } />
+
+        <Route path="/profile" element={
+          <PrivateRoute partnerId={partnerId}>
+            <ProfileSettingsPage
+              partner={PARTNERS[partnerId]}
+              onBack={() => navigate("/dashboard")}
+              onLogout={handleLogout}
+            />
+          </PrivateRoute>
+        } />
+
+        <Route path="/policy-review" element={
+          <PolicyReviewRoute 
+            onConfirm={(workerId, slab) => {
+              // Now handled within PolicyReviewRoute definition above
+            }}
+          />
+        } />
+
+        <Route path="/payout-setup" element={<PayoutSetupRoute />} />
+        <Route path="/b2b" element={<B2BPartnerPortal onBack={() => navigate("/")} />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to={partnerId ? "/dashboard" : "/"} replace />} />

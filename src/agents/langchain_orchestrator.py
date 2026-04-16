@@ -237,6 +237,7 @@ class GigShieldLangChainOrchestrator:
             payout_amount=payout_amount,
             payload={
                 "eligibility": elig.is_eligible,
+                "city": city,
                 "rag_answers": rag_answers,
                 "ml_keys": list(ml_predictions.keys()) if ml_predictions else [],
             },

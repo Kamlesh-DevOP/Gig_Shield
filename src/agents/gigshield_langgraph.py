@@ -427,6 +427,8 @@ class GigShieldLangGraphOrchestrator:
             "ml_keys": list((state.get("ml_bundle") or {}).get("ml_predictions", {}).keys()),
             "mcp_risk_level": mcp_risk.get("overall_risk_level"),
             "mcp_combined_multiplier": mcp_risk.get("combined_multiplier"),
+            "city": row.get("city"),
+            "platform": row.get("platform"),
         }
         try:
             from src.persistence.supabase_client import insert_decision_any

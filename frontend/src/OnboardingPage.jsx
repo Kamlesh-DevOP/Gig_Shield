@@ -4,7 +4,9 @@ import {
   ChevronRight, ArrowLeft, CheckCircle, AlertTriangle, Radio,
   BadgeCheck, Zap,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "./supabaseClient";
+import Stepper from "./Stepper";
 
 // ── Platform options ────────────────────────────────────────────────────────
 const PLATFORMS = ["Blinkit", "Zepto", "Swiggy", "Zomato", "Dunzo", "BigBasket", "Other"];
@@ -144,8 +146,8 @@ function SuccessScreen({ form, onBack }) {
       {/* Summary card */}
       <div className="ob-summary-card">
         {[
-          ["City",      form.city],
-          ["Platform",  form.platform],
+          ["City", form.city],
+          ["Platform", form.platform],
           ["Outlet ID", form.outlet_id],
           ["Worker ID", form.worker_id],
         ].map(([label, val]) => (
@@ -165,9 +167,10 @@ function SuccessScreen({ form, onBack }) {
 
 // ── Main Onboarding Page ─────────────────────────────────────────────────────
 export default function OnboardingPage({ onBack }) {
-  const [step, setStep]     = useState(1);   // 1, 2, or "done"
+  const navigate = useNavigate();
+  const [step, setStep] = useState(1);   // 1, 2, or "done"
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors]   = useState({});
+  const [errors, setErrors] = useState({});
   const [globalError, setGlobalError] = useState("");
 
   const [form, setForm] = useState({
@@ -178,12 +181,12 @@ export default function OnboardingPage({ onBack }) {
   function validate(stepNum) {
     const errs = {};
     if (stepNum === 1) {
-      if (!form.name.trim())                       errs.name     = "Name is required";
-      if (form.password.length < 6)                errs.password = "Minimum 6 characters";
+      if (!form.name.trim()) errs.name = "Name is required";
+      if (form.password.length < 6) errs.password = "Minimum 6 characters";
     }
     if (stepNum === 2) {
-      if (!form.city.trim())                       errs.city      = "City is required";
-      if (!form.platform)                          errs.platform  = "Select a platform";
+      if (!form.city.trim()) errs.city = "City is required";
+      if (!form.platform) errs.platform = "Select a platform";
       if (!form.outlet_id || isNaN(form.outlet_id)) errs.outlet_id = "Valid outlet ID required";
       if (!form.worker_id || isNaN(form.worker_id)) errs.worker_id = "Valid worker ID required";
     }
@@ -207,10 +210,10 @@ export default function OnboardingPage({ onBack }) {
     setLoading(true);
 
     const payload = {
-      name:      form.name.trim(),
-      password:  form.password,
-      city:      form.city.trim(),
-      platform:  form.platform,
+      name: form.name.trim(),
+      password: form.password,
+      city: form.city.trim(),
+      platform: form.platform,
       outlet_id: parseInt(form.outlet_id, 10),
       worker_id: parseInt(form.worker_id, 10),
     };
@@ -226,7 +229,10 @@ export default function OnboardingPage({ onBack }) {
       }
       return;
     }
-    setStep("done");
+
+    // Redirect to the professional policy review page as requested
+    // Pass form data via state so it can be used for summary
+    navigate("/policy-review", { state: { form } });
   }
 
   return (
@@ -289,7 +295,7 @@ export default function OnboardingPage({ onBack }) {
               </div>
 
               {/* Step dots */}
-              <StepDots step={step} />
+              <Stepper currentStep={1} />
 
               {/* Global error */}
               {globalError && (
