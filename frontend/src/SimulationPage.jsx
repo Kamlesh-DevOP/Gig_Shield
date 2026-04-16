@@ -5,7 +5,7 @@ import {
   MapPin, BarChart2, CircleDollarSign, Target,
   Droplets, Wind, Thermometer, Gauge, Satellite,
   Brain, Scan, BadgeCheck, XCircle, ChevronRight,
-  Banknote, Clock, Percent, FileText, Map,
+  Banknote, Clock, Percent, FileText, Map, RefreshCw
 } from "lucide-react";
 import DisruptionTypeTabs from "./DisruptionTypeTabs";
 import CoverageMapTab from "./CoverageMap";
@@ -24,6 +24,7 @@ const PIPELINE_STEPS = [
   { key: "analyzing", label: "ML Inference", icon: Brain, color: "#7C3AED" },
   { key: "eligibility", label: "Eligibility Check", icon: Scan, color: "#D97706" },
   { key: "decision", label: "Decision", icon: ShieldCheck, color: "#059669" },
+  { key: "payout", label: "Payout", icon: Banknote, color: "#10B981" },
 ];
 
 export default function SimulationPage({ partnerId, partnerData, onBack }) {
@@ -35,6 +36,7 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
   const [marketIntel, setMarketIntel] = useState(null);
   const [mlPreds, setMlPreds] = useState(null);
   const [claimResult, setClaimResult] = useState(null);
+  const [payoutResult, setPayoutResult] = useState(null);
   const [error, setError] = useState(null);
   const [logs, setLogs] = useState([]);
   const logRef = useRef(null);
@@ -121,6 +123,7 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
     setMarketIntel(null);
     setMlPreds(null);
     setClaimResult(null);
+    setPayoutResult(null);
     setLogs([]);
 
     const workerPayload = buildWorkerPayload();
@@ -287,8 +290,49 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
 
       await sleep(400);
       setStep("decision");
-      addLog("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", "info");
-      addLog(`🏁 Simulation complete! Decision: ${claim.decision} | Payout: ${fmt(claim.payout_amount || 0)}`, claim.decision === "APPROVE" ? "success" : "warning");
+      addLog("━━━━━━━━━━━━━━━━━━", "info");
+      addLog(`🏁 Decision: ${claim.decision} | Payout: ${fmt(claim.payout_amount || 0)}`, claim.decision === "APPROVE" ? "success" : "warning");
+
+      // ── STEP 4: Simulate Payout (if approved) ──
+      if (claim.decision === "APPROVE" && (claim.payout_amount || 0) > 0) {
+        await sleep(800);
+        setStep("payout");
+        addLog("💸 Initiating RazorpayX payout simulation...", "info");
+        addLog(`   → Contact creation → Fund account linking → Payout transfer`, "data");
+        await sleep(1200);
+
+        try {
+          const payoutRes = await fetch(`${API}/api/payout/initiate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              worker_id: workerPayload.worker_id,
+              amount: claim.payout_amount,
+              claim_trace_id: claim.trace_id || `sim_${Date.now()}`,
+              reason: `Simulation payout: ${scenario} disruption in ${city}`,
+            }),
+          });
+
+          if (payoutRes.ok) {
+            const payoutData = await payoutRes.json();
+            setPayoutResult(payoutData);
+            addLog(`✅ Payout ${payoutData.demo ? "(Demo)" : ""} initiated successfully!`, "success");
+            addLog(`   💳 Payout ID: ${payoutData.payout_id}`, "data");
+            addLog(`   📱 Mode: ${payoutData.mode} → ${payoutData.destination || "linked account"}`, "data");
+            addLog(`   🏦 UTR: ${payoutData.utr || "pending"}`, "data");
+            addLog(`   💰 Amount: ${fmt(payoutData.amount)}`, "data");
+          } else {
+            addLog(`⚠️  Payout API returned ${payoutRes.status}. Backend may not be configured.`, "warning");
+            setPayoutResult({ status: "simulated", amount: claim.payout_amount, demo: true, payout_id: `sim_${Date.now()}`, mode: "UPI", utr: `UTR${Math.floor(Math.random() * 999999999)}` });
+          }
+        } catch (payErr) {
+          addLog(`⚠️  Payout simulation failed: ${payErr.message}. Showing mock result.`, "warning");
+          setPayoutResult({ status: "simulated", amount: claim.payout_amount, demo: true, payout_id: `sim_${Date.now()}`, mode: "UPI", utr: `UTR${Math.floor(Math.random() * 999999999)}` });
+        }
+
+        addLog("━━━━━━━━━━━━━━━━━━", "info");
+        addLog(`🏁 Full pipeline complete! Payout of ${fmt(claim.payout_amount)} processed.`, "success");
+      }
     } catch (e) {
       addLog(`❌ Claim processing failed: ${e.message}`, "error");
       setError(`Claim processing failed: ${e.message}`);
@@ -296,8 +340,8 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
     }
   };
 
-  const isRunning = !["idle", "decision"].includes(step);
-  const isDone = step === "decision";
+  const isRunning = !["idle", "decision", "payout"].includes(step);
+  const isDone = step === "decision" || step === "payout";
   const currentStepIdx = PIPELINE_STEPS.findIndex(s => s.key === step);
 
   return (
@@ -532,8 +576,65 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
                     <Brain size={15} color="#7C3AED" />
                     <span>ML Predictions — Worker #{mlPreds.worker_id}</span>
                   </div>
-                  <div className="sim-ml-grid">
-                    {renderMLPredictions(mlPreds.predictions)}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, padding: "12px 0" }}>
+                    {mlPreds.predictions && Object.entries(mlPreds.predictions).map(([key, val]) => {
+                      if (key === "claim_eligibility") {
+                        // Show as a simple badge
+                        const eligible = val?.is_eligible ?? (typeof val === "object" ? Object.values(val)[0] : val);
+                        return (
+                          <div key={key} style={{
+                            padding: "12px 14px", borderRadius: 10, gridColumn: "span 3",
+                            background: eligible ? "rgba(16,185,129,0.06)" : "rgba(239,68,68,0.05)",
+                            border: `1px solid ${eligible ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.12)"}`,
+                            display: "flex", alignItems: "center", gap: 8,
+                          }}>
+                            {eligible ? <CheckCircle size={14} color="var(--green)" /> : <XCircle size={14} color="var(--red)" />}
+                            <span style={{ fontWeight: 600, fontSize: 12, color: eligible ? "var(--green)" : "var(--red)" }}>
+                              {eligible ? "Eligible for Claim" : "Not Eligible"}
+                            </span>
+                          </div>
+                        );
+                      }
+                      const label = key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+                      let displayVal = "";
+                      if (typeof val === "number") {
+                        displayVal = val > 100 ? fmt(Math.round(val)) : val.toFixed(3);
+                      } else if (typeof val === "object" && val !== null) {
+                        const num = val.ensemble || val.final_premium || val.risk_score || val.fraud_probability || val.behavior_score;
+                        if (typeof num === "number") {
+                          if (key.includes("score") || key.includes("fraud") || key.includes("behavior")) {
+                            displayVal = (num * 100).toFixed(1) + "%";
+                          } else {
+                            displayVal = num > 100 ? fmt(Math.round(num)) : num.toFixed(3);
+                          }
+                        } else {
+                          displayVal = "—";
+                        }
+                      } else {
+                        displayVal = String(val);
+                      }
+
+                      const iconMap = {
+                        "Income Forecast": CircleDollarSign, "Risk Scoring": Target, "Risk Score": Target,
+                        "Fraud Detection": Scan, "Fraud Analysis": Scan, "Premium Prediction": Banknote,
+                        "Premium": Banknote, "Disruption Impact": TrendingDown, "Behavior Analysis": Activity,
+                      };
+                      const Icon = iconMap[label] || BarChart2;
+
+                      return (
+                        <div key={key} style={{
+                          padding: "12px 14px", borderRadius: 10,
+                          background: "rgba(124,58,237,0.04)", border: "1px solid rgba(124,58,237,0.08)",
+                          textAlign: "center",
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, marginBottom: 6 }}>
+                            <Icon size={12} color="#7C3AED" />
+                            <span style={{ fontSize: 10, color: "var(--muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.3px" }}>{label}</span>
+                          </div>
+                          <div style={{ fontSize: 18, fontWeight: 800, fontFamily: "var(--mono)", color: "#7C3AED" }}>{displayVal}</div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -552,82 +653,197 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
                     </span>
                   </div>
 
-                  <div className="sim-decision-grid">
-                    <div className="sd-main-box">
-                      <div className="sd-main-label">Final Payout</div>
-                      <div className={`sd-main-val ${claimResult.payout_amount > 0 ? "green" : ""}`}>
+                  {/* ── Summary Row ── */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, margin: "16px 0" }}>
+                    <div style={{ padding: "14px 16px", borderRadius: 12, background: claimResult.payout_amount > 0 ? "rgba(16,185,129,0.06)" : "rgba(0,0,0,0.03)", textAlign: "center" }}>
+                      <div style={{ fontSize: 10, color: "var(--muted)", textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.5px" }}>Final Payout</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: claimResult.payout_amount > 0 ? "var(--green)" : "var(--text)", fontFamily: "var(--mono)", marginTop: 4 }}>
                         {fmt(claimResult.payout_amount || 0)}
                       </div>
-                      <div className="sd-main-sub">
-                        Confidence: {typeof claimResult.confidence === "number" ? (claimResult.confidence * 100).toFixed(1) + "%" : claimResult.confidence}
-                        {" · "}
-                        {claimResult.processing_time_ms}ms
+                    </div>
+                    <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(0,0,0,0.03)", textAlign: "center" }}>
+                      <div style={{ fontSize: 10, color: "var(--muted)", textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.5px" }}>Confidence</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: "var(--purple)", fontFamily: "var(--mono)", marginTop: 4 }}>
+                        {typeof claimResult.confidence === "number" ? (claimResult.confidence * 100).toFixed(1) + "%" : claimResult.confidence || "—"}
                       </div>
                     </div>
-
-                    <div className="sd-details">
-                      {[
-                        ["Decision", claimResult.decision],
-                        ["Trace ID", claimResult.trace_id?.slice(0, 12) + "..."],
-                        ["Worker ID", claimResult.worker_id],
-                        ["Timestamp", claimResult.timestamp ? new Date(claimResult.timestamp).toLocaleString() : "—"],
-                      ].map(([l, v]) => (
-                        <div key={l} className="sd-detail-row">
-                          <span className="sd-detail-label">{l}</span>
-                          <span className="sd-detail-val">{v}</span>
-                        </div>
-                      ))}
+                    <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(0,0,0,0.03)", textAlign: "center" }}>
+                      <div style={{ fontSize: 10, color: "var(--muted)", textTransform: "uppercase", fontWeight: 600, letterSpacing: "0.5px" }}>Processing</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: "var(--text2)", fontFamily: "var(--mono)", marginTop: 4 }}>
+                        {Math.round(claimResult.processing_time_ms / 1000) || 0}<span style={{ fontSize: 12, fontWeight: 500 }}> second(s)</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Eligibility details */}
+                  {/* ── Eligibility Status ── */}
                   {claimResult.claim_eligibility && (
-                    <div className="sd-eligibility">
-                      <div className="sd-elig-header">
+                    <div style={{
+                      padding: "14px 18px", borderRadius: 12, marginBottom: 14,
+                      background: claimResult.claim_eligibility.is_eligible ? "rgba(16,185,129,0.06)" : "rgba(239,68,68,0.05)",
+                      border: `1px solid ${claimResult.claim_eligibility.is_eligible ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.12)"}`,
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: claimResult.claim_eligibility.reasons?.length ? 10 : 0 }}>
                         {claimResult.claim_eligibility.is_eligible
-                          ? <><CheckCircle size={13} color="var(--green)" /> Eligible for Payout</>
-                          : <><XCircle size={13} color="var(--red)" /> Not Eligible</>
+                          ? <CheckCircle size={15} color="var(--green)" />
+                          : <XCircle size={15} color="var(--red)" />
                         }
+                        <span style={{ fontWeight: 700, fontSize: 13, color: claimResult.claim_eligibility.is_eligible ? "var(--green)" : "var(--red)" }}>
+                          {claimResult.claim_eligibility.is_eligible ? "Eligible for Claim Payout" : "Not Eligible for Payout"}
+                        </span>
                       </div>
                       {claimResult.claim_eligibility.reasons?.length > 0 && (
-                        <ul className="sd-elig-reasons">
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
                           {claimResult.claim_eligibility.reasons.map((r, i) => (
-                            <li key={i}>{r}</li>
+                            <span key={i} style={{
+                              fontSize: 11, padding: "4px 10px", borderRadius: 6,
+                              background: claimResult.claim_eligibility.is_eligible ? "rgba(16,185,129,0.08)" : "rgba(239,68,68,0.06)",
+                              color: claimResult.claim_eligibility.is_eligible ? "#047857" : "#DC2626",
+                              border: `1px solid ${claimResult.claim_eligibility.is_eligible ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.15)"}`,
+                              fontWeight: 500,
+                            }}>
+                              {r}
+                            </span>
                           ))}
-                        </ul>
+                        </div>
                       )}
                     </div>
                   )}
 
-                  {/* Payout breakdown */}
+                  {/* ── Payout Breakdown ── */}
                   {claimResult.payout_breakdown && (
-                    <div className="sd-breakdown">
-                      <div className="sd-breakdown-title"><Banknote size={13} /> Payout Breakdown</div>
-                      <div className="sd-breakdown-items">
-                        {Object.entries(claimResult.payout_breakdown).map(([k, v]) => (
-                          <div key={k} className="sd-bd-item">
-                            <span className="sd-bd-label">{k.replace(/_/g, " ")}</span>
-                            <span className="sd-bd-val">{typeof v === "number" ? (v > 10 ? fmt(Math.round(v)) : v.toFixed(3)) : String(v)}</span>
-                          </div>
-                        ))}
+                    <div style={{
+                      padding: "20px 24px", borderRadius: 14, marginBottom: 20,
+                      background: "rgba(107,45,139,0.03)", border: "1px solid rgba(107,45,139,0.08)",
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, fontSize: 13, fontWeight: 700, color: "var(--purple-dark)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        <Banknote size={15} color="var(--purple)" /> Payout Calculation Breakdown
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 24px" }}>
+                        {Object.entries(claimResult.payout_breakdown).map(([k, v]) => {
+                          if (k === "breakdown") return null;
+                          const label = k.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+                          const isAmount = typeof v === "number" && v > 10;
+                          const isPercent = typeof v === "number" && v <= 1 && v >= 0;
+                          const displayVal = typeof v === "number"
+                            ? (isPercent ? (v * 100).toFixed(1) + "%" : isAmount ? fmt(Math.round(v)) : v.toFixed(3))
+                            : String(v);
+                          return (
+                            <div key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                              <span style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500 }}>{label}</span>
+                              <span style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--mono)", color: typeof v === "number" ? "var(--purple)" : "var(--purple)" }}>{displayVal}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
 
-                  {/* ML predictions in claim */}
+                  {/* ── ML Predictions Summary (compact) ── */}
                   {claimResult.ml_predictions && (
-                    <div className="sd-breakdown" style={{ marginTop: 12 }}>
-                      <div className="sd-breakdown-title"><Brain size={13} /> ML Predictions (from Orchestrator)</div>
-                      <div className="sd-breakdown-items">
-                        {Object.entries(claimResult.ml_predictions).map(([k, v]) => (
-                          <div key={k} className="sd-bd-item">
-                            <span className="sd-bd-label">{k.replace(/_/g, " ")}</span>
-                            <span className="sd-bd-val">{typeof v === "number" ? v.toFixed(4) : typeof v === "object" ? JSON.stringify(v).slice(0, 60) : String(v)}</span>
-                          </div>
-                        ))}
+                    <div style={{
+                      padding: "14px 18px", borderRadius: 12,
+                      background: "rgba(124,58,237,0.03)", border: "1px solid rgba(124,58,237,0.08)",
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, fontSize: 12, fontWeight: 700, color: "var(--purple-dark)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        <Brain size={13} color="#7C3AED" /> ML Model Scores
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        {Object.entries(claimResult.ml_predictions).map(([k, v]) => {
+                          if (k === "claim_eligibility") return null; // Skip — already shown above
+                          const label = k.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+                          let displayVal = "";
+                          if (typeof v === "number") {
+                            displayVal = v > 100 ? fmt(Math.round(v)) : v.toFixed(3);
+                          } else if (typeof v === "object" && v !== null) {
+                            const num = v.ensemble || v.final_premium || v.risk_score || v.fraud_probability || v.behavior_score;
+                            displayVal = typeof num === "number" ? (num > 100 ? fmt(Math.round(num)) : num.toFixed(3)) : "—";
+                          } else {
+                            displayVal = String(v);
+                          }
+                          return (
+                            <div key={k} style={{
+                              padding: "6px 12px", borderRadius: 8, fontSize: 11,
+                              background: "rgba(124,58,237,0.05)", border: "1px solid rgba(124,58,237,0.1)",
+                              display: "flex", alignItems: "center", gap: 6,
+                            }}>
+                              <span style={{ color: "var(--muted)", fontWeight: 500 }}>{label}</span>
+                              <span style={{ fontWeight: 700, fontFamily: "var(--mono)", color: "#7C3AED" }}>{displayVal}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
+
+                  {/* ── Trace Info (compact footer) ── */}
+                  <div style={{ display: "flex", gap: 16, marginTop: 14, fontSize: 11, color: "var(--muted)", paddingTop: 10, borderTop: "1px solid rgba(0,0,0,0.05)" }}>
+                    <span>Trace: <code style={{ fontFamily: "var(--mono)", fontSize: 10 }}>{claimResult.trace_id?.slice(0, 16)}...</code></span>
+                    <span>Worker: #{claimResult.worker_id}</span>
+                    {claimResult.timestamp && <span>{new Date(claimResult.timestamp).toLocaleString()}</span>}
+                  </div>
+                </div>
+              )}
+
+              {/* Payout Result */}
+              {payoutResult && (
+                <div className="sim-result-card" style={{
+                  background: "linear-gradient(135deg, #ECFDF5, #D1FAE5)",
+                  border: "1.5px solid var(--green-bdr)",
+                }}>
+                  <div className="src-header">
+                    <BadgeCheck size={15} color="var(--green)" />
+                    <span>Payout {payoutResult.demo ? "(Demo)" : "Processed"}</span>
+                    <span className="src-badge badge-green">
+                      {payoutResult.status === "processed" || payoutResult.status === "demo_success" ? "CREDITED" : "SIMULATED"}
+                    </span>
+                  </div>
+                  <div style={{ padding: "16px 0" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                      <div style={{ padding: 16, borderRadius: 12, background: "rgba(16,185,129,0.08)", textAlign: "center" }}>
+                        <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", fontWeight: 600 }}>Amount Credited</div>
+                        <div style={{ fontSize: 24, fontWeight: 800, color: "var(--green)", fontFamily: "var(--mono)" }}>{fmt(payoutResult.amount || 0)}</div>
+                      </div>
+                      <div style={{ padding: 16, borderRadius: 12, background: "rgba(16,185,129,0.08)", textAlign: "center" }}>
+                        <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", fontWeight: 600 }}>Transfer Mode</div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: "var(--green)" }}>{payoutResult.mode || "UPI"}</div>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      {[
+                        ["Payout ID", payoutResult.payout_id?.slice(0, 20) + "..."],
+                        ["UTR", payoutResult.utr || "Pending"],
+                        ["Destination", payoutResult.destination || "Linked Account"],
+                        ["Status", payoutResult.status?.toUpperCase()],
+                      ].map(([l, v]) => (
+                        <div key={l} className="sd-detail-row">
+                          <span className="sd-detail-label">{l}</span>
+                          <span className="sd-detail-val" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>{v}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: 12, textAlign: "center" }}>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await fetch(`${API}/api/payout/reset`, {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ payout_id: payoutResult.payout_id }),
+                            });
+                            setPayoutResult(null);
+                            addLog("\u21bb Payout reset \u2014 ready for re-test", "info");
+                          } catch (e) { console.error("Reset failed:", e); }
+                        }}
+                        style={{
+                          fontSize: 11, padding: "6px 16px", borderRadius: 6,
+                          background: "rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.12)",
+                          color: "var(--muted)", cursor: "pointer",
+                        }}
+                      >
+                        Reset Payout (Debug)
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -719,67 +935,4 @@ function getMockMarketIntel(city, scenario) {
         : "Current search results show no major protests or strikes. Road conditions are normal for Bengaluru/Chennai current peak hours.",
     formula: "P_final = P_base x R_weather x R_market"
   };
-}
-
-function renderMLPredictions(preds) {
-  if (!preds) return null;
-  const cards = [];
-  const tryNum = (v) => {
-    if (typeof v === "number") return v;
-    if (typeof v === "object" && v !== null) {
-      const first = Object.values(v)[0];
-      if (typeof first === "number") return first;
-    }
-    return null;
-  };
-
-  const entries = Object.entries(preds);
-  entries.forEach(([key, val]) => {
-    const label = key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-    let displayVal = "";
-    let isPercentage = false;
-
-    if (typeof val === "number") {
-      displayVal = val > 100 ? fmt(Math.round(val)) : val.toFixed(3);
-    } else if (typeof val === "object" && val !== null) {
-      // Try to extract the most meaningful value
-      const meaningful = val.ensemble || val.final_premium || val.risk_score || val.fraud_probability || val.behavior_score;
-      const num = tryNum(meaningful ?? val);
-      if (num !== null) {
-        if (key.includes("score") || key.includes("fraud") || key.includes("behavior")) {
-          displayVal = (num * 100).toFixed(1) + "%";
-          isPercentage = true;
-        } else {
-          displayVal = num > 100 ? fmt(Math.round(num)) : num.toFixed(3);
-        }
-      } else {
-        displayVal = JSON.stringify(val).slice(0, 50);
-      }
-    } else {
-      displayVal = String(val);
-    }
-
-    const icons = {
-      "Income Forecast": CircleDollarSign,
-      "Risk Scoring": Target,
-      "Risk Score": Target,
-      "Fraud Detection": Scan,
-      "Fraud Analysis": Scan,
-      "Premium Prediction": Banknote,
-      "Premium": Banknote,
-      "Disruption Impact": TrendingDown,
-      "Behavior Analysis": Activity,
-    };
-    const Icon = icons[label] || BarChart2;
-
-    cards.push(
-      <div key={key} className="sim-ml-item">
-        <div className="smi-icon"><Icon size={14} /></div>
-        <div className="smi-label">{label}</div>
-        <div className="smi-val">{displayVal}</div>
-      </div>
-    );
-  });
-
-  return cards;
 }

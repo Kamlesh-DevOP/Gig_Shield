@@ -92,3 +92,26 @@ class RazorpayOrderResponse(BaseModel):
     currency: str
     receipt: Optional[str] = None
     status: str
+
+
+class PayoutRequest(BaseModel):
+    worker_id: int
+    amount: float = Field(..., gt=0, description="Payout amount in INR")
+    claim_trace_id: str = Field(..., description="Trace ID linking to the ML decision")
+    reason: str = "Parametric insurance claim payout"
+
+
+class PayoutResponse(BaseModel):
+    payout_id: str
+    status: str  # "processing" / "processed" / "demo_success"
+    amount: float
+    mode: str  # "UPI" or "IMPS"
+    utr: Optional[str] = None
+    fund_account_id: str
+    contact_id: str
+    worker_id: int
+    claim_trace_id: str
+    destination: Optional[str] = None
+    payout_method: Optional[str] = None
+    demo: bool = False
+    timestamp: Optional[str] = None

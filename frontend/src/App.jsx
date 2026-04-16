@@ -518,6 +518,47 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout, paidForNextWe
 
   const hasPayout = evaluation?.decision === "APPROVE" || (evaluation?.payout_amount > 0);
 
+  // ── Payout state ──
+  const [payoutState, setPayoutState] = useState(null); // null | { status, payout_id, utr, ... }
+  const [payoutLoading, setPayoutLoading] = useState(false);
+
+  const handleInitiatePayout = async () => {
+    if (!evaluation || !hasPayout) return;
+    setPayoutLoading(true);
+    try {
+      const workerId = partnerId.startsWith("DB") ? parseInt(partnerId.replace("DB", "")) : 1;
+      const res = await fetch("http://localhost:8000/api/payout/initiate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          worker_id: workerId,
+          amount: evaluation.payout_amount || pricing.payout,
+          claim_trace_id: evaluation.trace_id || `local_${Date.now()}`,
+          reason: "Parametric insurance claim payout"
+        })
+      });
+      const data = await res.json();
+      setPayoutState(data);
+    } catch (err) {
+      console.error("Payout initiation failed:", err);
+      setPayoutState({ status: "error", error: err.message });
+    } finally {
+      setPayoutLoading(false);
+    }
+  };
+
+  const handleResetPayout = async () => {
+    if (!payoutState) return;
+    try {
+      await fetch("http://localhost:8000/api/payout/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payout_id: payoutState.payout_id }),
+      });
+      setPayoutState(null);
+    } catch (e) { console.error("Reset failed:", e); }
+  };
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", flexDirection: "column" }}>
       <Header partner={partner} onLogout={onLogout} />
@@ -666,16 +707,22 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout, paidForNextWe
           </div>
         </div>
 
-        {/* Claim status strip (Updated with Live Backend Data) */}
+        {/* Claim status strip (Updated with Live Backend Data + Payout Status) */}
         <div className={hasPayout ? "alert alert-red" : "alert alert-blue"} style={{ marginBottom: 20 }}>
           <div className="alert-icon">
             {evalLoading ? <Radio size={20} className="spin" color="var(--purple)" /> :
+              payoutState?.status === "processed" || payoutState?.status === "demo_success" ? <CheckCircle size={20} color="var(--green)" /> :
               hasPayout ? <CloudRain size={20} color="var(--red)" /> :
                 <ShieldCheck size={20} color="var(--purple)" />}
           </div>
           <div className="alert-body">
             {evalLoading ? (
               <div className="alert-title" style={{ color: "var(--purple)" }}>Analyzing this week's disruption data...</div>
+            ) : payoutState?.status === "processed" || payoutState?.status === "demo_success" ? (
+              <>
+                <div className="alert-title" style={{ color: "var(--green)" }}>✅ Payout {fmt(payoutState.amount)} Credited</div>
+                <div className="alert-desc">UTR: {payoutState.utr || "Processing"} · Sent via {payoutState.mode} to {payoutState.destination || "linked account"} {payoutState.demo ? " (Demo Mode)" : ""}</div>
+              </>
             ) : hasPayout ? (
               <>
                 <div className="alert-title" style={{ color: "var(--red)" }}>Insurance Trigger: {evaluation?.decision || "PAYOUT READY"}</div>
@@ -688,9 +735,24 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout, paidForNextWe
               </>
             )}
           </div>
-          <button className="alert-btn" style={{ background: hasPayout ? "var(--green)" : "var(--purple)", color: "#fff" }} onClick={onViewClaim}>
-            {hasPayout ? "View Breakdown" : "Check Details"}
-          </button>
+          {hasPayout && !payoutState ? (
+            <button className="alert-btn" style={{ background: "var(--green)", color: "#fff", display: "flex", alignItems: "center", gap: 6 }} onClick={handleInitiatePayout} disabled={payoutLoading}>
+              {payoutLoading ? <><Radio size={14} className="spin" /> Processing...</> : <><Zap size={14} /> Claim Payout</>}
+            </button>
+          ) : (
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <button className="alert-btn" style={{ background: payoutState ? "var(--green)" : "var(--purple)", color: "#fff" }} onClick={onViewClaim}>
+                {payoutState ? "View Receipt" : hasPayout ? "View Breakdown" : "Check Details"}
+              </button>
+              {payoutState && (
+                <button onClick={handleResetPayout} style={{
+                  fontSize: 10, padding: "4px 10px", borderRadius: 6,
+                  background: "rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.1)",
+                  color: "var(--muted)", cursor: "pointer", whiteSpace: "nowrap",
+                }}>↻ Reset</button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Stats */}
@@ -1251,6 +1313,167 @@ function PaymentSuccess({ partnerId }) {
 }
 
 
+// ─── CLAIM PAYOUT ACTION ──────────────────────────────────────────────────────
+function ClaimPayoutAction({ partner, pricing, evaluation }) {
+  const [payoutState, setPayoutState] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const p = pricing;
+
+  const handlePayout = async () => {
+    setLoading(true);
+    try {
+      const workerId = partner.id?.startsWith("DB") ? parseInt(partner.id.replace("DB", "")) : 1;
+      const res = await fetch("http://localhost:8000/api/payout/initiate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          worker_id: workerId,
+          amount: evaluation?.payout_amount || p.payout,
+          claim_trace_id: evaluation?.trace_id || `local_${Date.now()}`,
+          reason: "Parametric insurance claim payout",
+        }),
+      });
+      const data = await res.json();
+      setPayoutState(data);
+    } catch (err) {
+      console.error("Payout failed:", err);
+      setPayoutState({ status: "error", error: err.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const payoutMethod = partner.payout_method || "upi";
+  const destDisplay = payoutMethod === "upi"
+    ? (partner.upi_id || "UPI not linked")
+    : partner.account_number
+      ? `****${partner.account_number.slice(-4)}`
+      : partner.bankId || "Bank not linked";
+
+  // Success state
+  if (payoutState?.status === "processed" || payoutState?.status === "demo_success") {
+    return (
+      <div className="claim-trigger-banner" style={{
+        background: "linear-gradient(135deg, #ECFDF5, #D1FAE5)",
+        borderColor: "var(--green-bdr)",
+      }}>
+        <div style={{ flex: 1 }}>
+          <div className="ctb-label" style={{ color: "var(--green)" }}>
+            <CheckCircle size={16} style={{ display: "inline", marginRight: 6 }} />
+            Payout Credited Successfully {payoutState.demo ? "(Demo Mode)" : ""}
+          </div>
+          <div className="ctb-desc" style={{ marginTop: 8, lineHeight: 1.7 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", fontSize: 13 }}>
+              <span><strong>Amount:</strong> {fmt(payoutState.amount)}</span>
+              <span><strong>Mode:</strong> {payoutState.mode}</span>
+              <span><strong>UTR:</strong> <code style={{ background: "rgba(0,0,0,0.05)", padding: "2px 6px", borderRadius: 4 }}>{payoutState.utr || "—"}</code></span>
+              <span><strong>To:</strong> {payoutState.destination || destDisplay}</span>
+            </div>
+          </div>
+          <div className="ctb-bank" style={{ marginTop: 8, color: "var(--green)", fontSize: 11 }}>
+            Payout ID: {payoutState.payout_id} · {new Date(payoutState.timestamp || Date.now()).toLocaleString()}
+          </div>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--green)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 8px" }}>
+            <BadgeCheck size={28} color="#fff" />
+          </div>
+          <div className="ctb-amount" style={{ color: "var(--green)" }}>{fmt(payoutState.amount)}</div>
+          <button
+            onClick={async () => {
+              try {
+                await fetch("http://localhost:8000/api/payout/reset", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ payout_id: payoutState.payout_id }),
+                });
+                setPayoutState(null);
+              } catch (e) { console.error("Reset failed:", e); }
+            }}
+            style={{
+              marginTop: 10, fontSize: 10, padding: "4px 12px", borderRadius: 6,
+              background: "rgba(0,0,0,0.05)", border: "1px solid rgba(0,0,0,0.1)",
+              color: "var(--muted)", cursor: "pointer",
+            }}
+          >
+            ↻ Reset (Debug)
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (payoutState?.status === "error") {
+    return (
+      <div className="claim-trigger-banner" style={{ borderColor: "var(--red-bdr)" }}>
+        <div>
+          <div className="ctb-label" style={{ color: "var(--red)" }}>
+            <AlertTriangle size={14} style={{ display: "inline", marginRight: 6 }} />
+            Payout Failed
+          </div>
+          <div className="ctb-desc" style={{ color: "var(--red)" }}>
+            {payoutState.error || "An unexpected error occurred. Please try again."}
+          </div>
+          <button className="btn-premium" style={{ marginTop: 12, fontSize: 13, padding: "8px 20px" }} onClick={handlePayout}>
+            <Zap size={14} /> Retry Payout
+          </button>
+        </div>
+        <div>
+          <div className="ctb-amount-label">Payout Amount</div>
+          <div className="ctb-amount" style={{ color: "var(--red)" }}>{fmt(p.payout)}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Default: Payout ready state
+  return (
+    <div className="claim-trigger-banner">
+      <div style={{ flex: 1 }}>
+        <div className="ctb-label">Claim Auto-Triggered — Payout Ready</div>
+        <div className="ctb-desc">
+          Loss {fmt(p.loss)}
+          {p.defaults > 0 && ` → after ${(p.defaultFinePct * 100).toFixed(0)}% default fine → ₹${Math.round(p.loss * (1 - p.defaultFinePct)).toLocaleString("en-IN")}`}
+          {p.loyaltyCoveragePct > 0 && ` → +${(p.loyaltyCoveragePct * 100).toFixed(0)}% loyalty → ${fmt(p.netCoverableLoss)}`}
+          {` → × ${(p.rainCovPct * 100).toFixed(0)}% rain (${p.maxRainfall}cm) × 100% plan cover = `}
+          <strong>{fmt(p.payout)}</strong>
+        </div>
+        <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <div style={{
+            fontSize: 12, padding: "6px 14px", borderRadius: 8,
+            background: payoutMethod === "upi" ? "rgba(99,102,241,0.08)" : "rgba(107,45,139,0.08)",
+            border: `1px solid ${payoutMethod === "upi" ? "rgba(99,102,241,0.2)" : "rgba(107,45,139,0.2)"}`,
+            color: payoutMethod === "upi" ? "#6366F1" : "var(--purple)",
+            fontWeight: 600, display: "flex", alignItems: "center", gap: 5,
+          }}>
+            {payoutMethod === "upi" ? <Smartphone size={12} /> : <Building2 size={12} />}
+            {payoutMethod === "upi" ? "UPI" : "Bank Transfer"} → {destDisplay}
+          </div>
+          <button
+            className="btn-premium"
+            onClick={handlePayout}
+            disabled={loading}
+            style={{ fontSize: 13, padding: "10px 24px", display: "flex", alignItems: "center", gap: 6 }}
+          >
+            {loading ? (
+              <><Radio size={14} className="spin" /> Processing Payout...</>
+            ) : (
+              <><Zap size={14} /> Initiate Payout — {fmt(p.payout)}</>
+            )}
+          </button>
+        </div>
+      </div>
+      <div style={{ textAlign: "right" }}>
+        <div className="ctb-amount-label">Payout Amount</div>
+        <div className="ctb-amount">{fmt(p.payout)}</div>
+        <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4 }}>via RazorpayX</div>
+      </div>
+    </div>
+  );
+}
+
+
 function ClaimDetailView({ partnerId, evaluation, evalLoading, paidForNextWeek, onPayPremium }) {
   const navigate = useNavigate();
   const partner = PARTNERS[partnerId];
@@ -1446,23 +1669,7 @@ function ClaimDetailView({ partnerId, evaluation, evalLoading, paidForNextWeek, 
 
           <div style={{ marginTop: 30 }}>
             {p.claimTriggered ? (
-              <div className="claim-trigger-banner">
-                <div>
-                  <div className="ctb-label">Claim Auto-Triggered — Automatic Roll-out</div>
-                  <div className="ctb-desc">
-                    Loss {fmt(p.loss)}
-                    {p.defaults > 0 && ` → after ${(p.defaultFinePct * 100).toFixed(0)}% default fine → ₹${Math.round(p.loss * (1 - p.defaultFinePct)).toLocaleString("en-IN")}`}
-                    {p.loyaltyCoveragePct > 0 && ` → +${(p.loyaltyCoveragePct * 100).toFixed(0)}% loyalty → ${fmt(p.netCoverableLoss)}`}
-                    {` → × ${(p.rainCovPct * 100).toFixed(0)}% rain (${p.maxRainfall}cm) × 100% plan cover = `}
-                    <strong>{fmt(p.payout)}</strong>
-                  </div>
-                  <div className="ctb-bank">Will be credited to {partner.bankId} within 48 hours</div>
-                </div>
-                <div>
-                  <div className="ctb-amount-label">Payout Amount</div>
-                  <div className="ctb-amount">{fmt(p.payout)}</div>
-                </div>
-              </div>
+              <ClaimPayoutAction partner={partner} pricing={p} evaluation={evaluation} />
             ) : (
               <div className="no-claim-box">
                 <CheckCircle size={16} color="var(--green)" />

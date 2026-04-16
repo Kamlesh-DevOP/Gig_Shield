@@ -30,6 +30,8 @@ from src.api.schemas import (
     InferencePredictRequest,
     OrchestrateBatchRequest,
     OrchestrateBatchRequest,
+    PayoutRequest,
+    PayoutResponse,
     RAGRetrieveRequest,
     RazorpayOrderRequest,
     RazorpayOrderResponse,
@@ -729,6 +731,97 @@ def create_app() -> FastAPI:
         except Exception:
             logger.warning("Payment verification failed for order: %s", req.get("razorpay_order_id"))
             raise HTTPException(status_code=400, detail="Invalid payment signature")
+
+    # ───────────────────────────────────────────────────────────────────
+    # RazorpayX Payout Endpoints (Automatic Claim Disbursement)
+    # ───────────────────────────────────────────────────────────────────
+
+    @application.post("/api/payout/initiate", tags=["Payout"], response_model=PayoutResponse)
+    async def initiate_payout_endpoint(req: PayoutRequest):
+        """
+        Initiate an automatic payout to a worker's registered UPI/Bank account.
+
+        This is called after the ML orchestrator approves a claim.
+        Falls back to demo mode when RazorpayX credentials are not configured.
+        """
+        try:
+            from src.api.payout_service import process_claim_payout
+
+            result = await process_claim_payout(
+                worker_id=req.worker_id,
+                amount=req.amount,
+                claim_trace_id=req.claim_trace_id,
+                reason=req.reason,
+            )
+            return PayoutResponse(**result)
+        except Exception as e:
+            logger.exception("initiate_payout")
+            raise HTTPException(status_code=500, detail=str(e)) from e
+
+    @application.get("/api/payout/status/{payout_id}", tags=["Payout"])
+    async def get_payout_status(payout_id: str):
+        """
+        Check the status of a previously initiated payout.
+        Returns the current status (processing/processed/failed) and UTR if available.
+        """
+        try:
+            from src.api.payout_service import fetch_payout_status, _get_razorpayx_client, _is_demo_mode
+
+            client = _get_razorpayx_client()
+            result = fetch_payout_status(client, payout_id)
+            return {
+                "payout_id": result.get("id", payout_id),
+                "status": "demo_success" if _is_demo_mode() else result.get("status", "unknown"),
+                "utr": result.get("utr"),
+                "amount": result.get("amount"),
+                "mode": result.get("mode"),
+                "demo": result.get("demo", _is_demo_mode()),
+            }
+        except Exception as e:
+            logger.exception("get_payout_status")
+            raise HTTPException(status_code=500, detail=str(e)) from e
+
+    @application.post("/api/payout/reset", tags=["Payout"])
+    async def reset_payout_endpoint(req: Dict[str, Any] = {}):
+        """
+        Reset payout state for debugging.
+
+        Body (all optional):
+        - worker_id: int — reset payouts for a specific worker
+        - payout_id: str — reset a specific payout transaction
+        - (empty body) — reset ALL payout transactions
+
+        Clears payout_transactions table entries and cached Razorpay IDs.
+        """
+        try:
+            from src.api.payout_service import reset_payout
+
+            result = await reset_payout(
+                worker_id=req.get("worker_id"),
+                payout_id=req.get("payout_id"),
+            )
+            return result
+        except Exception as e:
+            logger.exception("reset_payout")
+            raise HTTPException(status_code=500, detail=str(e)) from e
+
+    @application.get("/api/payout/config", tags=["Payout"])
+    def get_payout_config():
+        """
+        Returns current payout configuration.
+
+        - auto_payout_enabled: whether payouts trigger automatically on claim approval
+        - demo_mode: whether we're using mock/demo payouts (no RazorpayX credentials)
+
+        Set AUTO_PAYOUT_ENABLED=true in .env to enable fully automatic payouts.
+        """
+        from src.api.payout_service import is_auto_payout_enabled, _is_demo_mode
+
+        return {
+            "auto_payout_enabled": is_auto_payout_enabled(),
+            "demo_mode": _is_demo_mode(),
+            "note": "Set AUTO_PAYOUT_ENABLED=true in .env for fully automatic payouts on claim approval."
+        }
 
     # ───────────────────────────────────────────────────────────────────
     # Disruption Simulation Endpoint
