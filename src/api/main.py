@@ -761,7 +761,7 @@ def create_app() -> FastAPI:
             "BTM":              {"lat": 12.9166, "lon": 77.6101},
             "Electronic City":  {"lat": 12.8399, "lon": 77.6770},
             # Chennai
-            "OMR":              {"lat": 12.9121, "lon": 80.2273},
+            "Sholinganallur":   {"lat": 12.9121, "lon": 80.2273},
             "Velachery":        {"lat": 12.9746, "lon": 80.2209},
             "Tambaram":         {"lat": 12.9249, "lon": 80.1000},
             # Mumbai
@@ -844,6 +844,41 @@ def create_app() -> FastAPI:
             "curfew": f"Section 144 imposed in {area}, {city}. Night curfew restricts worker movement.",
         }
 
+        # ── Fetch Dynamic Environment from Mock APIs ─────────────────────
+        try:
+            from mock_api.mock_api import weather as fetch_mock_weather, news as fetch_mock_news
+            
+            # 1. Fetch live weather for the city/scenario
+            weather_res = fetch_mock_weather(city=city, scenario=disruption_type)
+            reports = weather_res.get("reports", [])
+            # Try to match the specific area, otherwise take the first available
+            area_weather = next((r for r in reports if r.get("area", "").lower() == area.lower()), 
+                                reports[0] if reports else {})
+            
+            m = area_weather.get("measurements", {})
+            rainfall_mm = float(m.get("rainfall_mm_24h", 0))
+            
+            # 2. Build live overrides (Math Breakdown will use these exact numbers)
+            overrides = {
+                "rainfall_cm": rainfall_mm / 10.0,
+                "disruption_type": disruption_type.capitalize(),
+                "disruption_duration_hours": random.uniform(8, 16),
+                "cyclone_alert_level": 2 if disruption_type.lower() == "cyclone" else 0,
+                "temperature_extreme": float(m.get("temperature_c", 30)),
+            }
+
+            # 3. Fetch realistic news headline
+            news_res = fetch_mock_news(city=city, scenario=disruption_type, limit=1)
+            if news_res.get("articles"):
+                headline = news_res["articles"][0]["headline"] + f" in {area}"
+            else:
+                headline = MOCK_HEADLINES.get(disruption_type, f"Disruption detected in {area}, {city}.")
+            
+        except Exception as e:
+            logger.warning("Failed to fetch mock environment: %s. Falling back to basics.", e)
+            overrides = DISRUPTION_OVERRIDES.get(disruption_type.lower(), DISRUPTION_OVERRIDES["flood"])
+            headline = MOCK_HEADLINES.get(disruption_type, f"Disruption detected in {area}, {city}.")
+
         if not classic_orchestrator:
             raise HTTPException(
                 status_code=503,
@@ -856,9 +891,6 @@ def create_app() -> FastAPI:
                 status_code=400,
                 detail=f"Unknown area '{area}'. Valid areas: {list(AREA_CENTERS.keys())}",
             )
-
-        overrides = DISRUPTION_OVERRIDES.get(disruption_type, DISRUPTION_OVERRIDES["flood"])
-        headline = MOCK_HEADLINES.get(disruption_type, f"Disruption detected in {area}, {city}.")
 
         # ── Haversine distance function ──────────────────────────────────
         def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -991,8 +1023,22 @@ def create_app() -> FastAPI:
                     eligible_count += 1
                     total_payout += payout
 
+                loss_pct = 0.0
+                if avg_income > 0:
+                    loss_pct = ((avg_income - augmented["weekly_income"]) / avg_income) * 100.0
+
+                eligibility = wf.extras.get("claim_eligibility") if wf.extras else None
+                is_elig = False
+                elig_reasons = []
+                if eligibility:
+                    is_elig = getattr(eligibility, "is_eligible", False)
+                    elig_reasons = list(getattr(eligibility, "reasons", []) or [])
+
                 results_out.append({
                     "worker_id": rec.get("worker_id"),
+                    "city": rec.get("city") or city,
+                    "area": area,
+                    "slab": rec.get("selected_slab") or augmented.get("selected_slab") or "Standard Slab",
                     "decision": decision,
                     "payout_amount": payout,
                     "premium_amount": premium,
@@ -1001,6 +1047,13 @@ def create_app() -> FastAPI:
                         float(rec.get("outlet_lat") or 0),
                         float(rec.get("outlet_lon") or 0),
                     ),
+                    "weekly_income_predicted": augmented["weekly_income"],
+                    "avg_52week_income": avg_income,
+                    "loss_percentage": loss_pct,
+                    "ml_predictions": json_safe(wf.extras.get("ml_predictions") if wf.extras else None),
+                    "is_eligible": is_elig,
+                    "eligibility_reasons": json_safe(elig_reasons),
+                    "payout_breakdown": json_safe(wf.extras.get("payout_breakdown") if wf.extras else None),
                 })
             except Exception as e:
                 logger.warning("Worker %s simulation error: %s", rec.get("worker_id"), e)

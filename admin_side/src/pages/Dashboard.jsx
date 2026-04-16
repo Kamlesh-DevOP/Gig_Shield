@@ -10,7 +10,7 @@ const COLORS = ['#6B2D8B', '#C4A8E0', '#5B21B6', '#0D7A56', '#B91C1C'];
 
 const CITY_AREAS = {
   "Bengaluru": ["BTM", "Electronic City", "Whitefield"],
-  "Chennai": ["OMR", "Velachery", "Tambaram"],
+  "Chennai": ["Sholinganallur", "Velachery", "Tambaram"],
   "Mumbai": ["Bandra", "Andheri", "Dadar"],
   "Hyderabad": ["Gachibowli", "Hitech City", "Secunderabad"],
   "Delhi": ["Rohini", "Dwarka", "Connaught Place"],
@@ -123,15 +123,18 @@ const Dashboard = () => {
           }
         });
 
-        const slabPieData = Object.keys(slabCounts).map(key => ({ name: key, value: slabCounts[key] }));
+        const slabPieData = Object.keys(slabCounts)
+          .filter(k => k && k !== 'Unknown' && k !== 'null')
+          .map(key => ({ name: key, value: slabCounts[key] }));
         const disruptionBarsData = Object.keys(disruptionTypeMap).map(key => ({ name: key, Anomalies: disruptionTypeMap[key] }));
-        const thisWeekRatio = ((payoutSum / (premiumSum || 1)) * 100).toFixed(1);
-        const thisWeekPred = ((disruptionCount / Math.max(workers.length, 1)) * 100).toFixed(1);
-        const nextWeekRatio = ((forecastPayoutSum / (forecastPremiumSum || 1)) * 100).toFixed(1);
-        const nextWeekPred = ((riskWorkers / Math.max(workers.length, 1)) * 100).toFixed(1);
+        const thisWeekMargin = (100 - (payoutSum / (premiumSum || 1)) * 100).toFixed(1);
+        const thisWeekRisk = ((disruptionCount / Math.max(workers.length, 1)) * 100).toFixed(1);
+        const nextWeekMargin = (100 - (forecastPayoutSum / (forecastPremiumSum || 1)) * 100).toFixed(1);
+        const nextWeekRisk = ((riskWorkers / Math.max(workers.length, 1)) * 100).toFixed(1);
+        
         const dynamicLossRatioData = [
-          { name: 'This Week', ratio: parseFloat(thisWeekRatio), predictions: parseFloat(thisWeekPred) },
-          { name: 'Next Week', ratio: parseFloat(nextWeekRatio), predictions: parseFloat(nextWeekPred) }
+          { name: 'This Week', margin: parseFloat(thisWeekMargin), risk: parseFloat(thisWeekRisk) },
+          { name: 'Next Week', margin: parseFloat(nextWeekMargin), risk: parseFloat(nextWeekRisk) }
         ];
 
         setStats({
@@ -526,6 +529,148 @@ const Dashboard = () => {
           </div>
         )}
 
+        {/* ── Simulated Worker Details Table ── */}
+        {isSimActive && simResult.worker_results && simResult.worker_results.length > 0 && (
+          <div className="sim-table-container glass-panel animate-fade-in" style={{ marginTop: '1.5rem', padding: '1.25rem', overflowX: 'auto' }}>
+            <div className="chart-header" style={{ marginBottom: '1rem', borderBottom: '1px solid rgba(107, 45, 139, 0.1)', paddingBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: '1rem' }}>Simulated Worker Records ({simResult.worker_results.length})</h3>
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ color: 'var(--muted-dark)', borderBottom: '1px solid rgba(107, 45, 139, 0.1)' }}>
+                  <th style={{ padding: '0.75rem 0.5rem' }}>Worker ID</th>
+                  <th style={{ padding: '0.75rem 0.5rem' }}>Geo-Location</th>
+                  <th style={{ padding: '0.75rem 0.5rem' }}>Income Context &amp; Loss</th>
+                  <th style={{ padding: '0.75rem 0.5rem' }}>ML Risk Score</th>
+                  <th style={{ padding: '0.75rem 0.5rem' }}>Eligibility Status</th>
+                  <th style={{ padding: '0.75rem 0.5rem' }}>Final Payout Calculation</th>
+                </tr>
+              </thead>
+              <tbody>
+                {simResult.worker_results.filter(w => (w.payout_amount || 0) > 0).map(w => {
+                  let riskScore = 'N/A';
+                  if (w.ml_predictions && w.ml_predictions.risk_score) {
+                    const extracted = w.ml_predictions.risk_score.risk_score;
+                    if (extracted !== undefined) {
+                      riskScore = Number(extracted).toFixed(2);
+                    }
+                  }
+
+                  const pb = w.payout_breakdown || {};
+                  const isEligible = w.is_eligible;
+                  
+                  return (
+                    <React.Fragment key={w.worker_id}>
+                    <tr style={{ borderBottom: '1px solid rgba(107, 45, 139, 0.05)', backgroundColor: 'rgba(255, 255, 255, 0.5)' }}>
+                      <td style={{ padding: '0.75rem 0.5rem', verticalAlign: 'top' }}>
+                        <strong style={{ color: 'var(--text-dark)' }}>#{w.worker_id}</strong>
+                        <div style={{ marginTop: '4px' }}>
+                          <span style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'rgba(107, 45, 139, 0.1)', color: 'var(--purple)', borderRadius: '4px', fontWeight: 600 }}>
+                            {w.slab || 'Unknown'}
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem', verticalAlign: 'top' }}>
+                        <span style={{ fontWeight: '500', color: 'var(--text-dark)' }}>{w.city} / {w.area}</span><br />
+                        <span style={{ fontSize: '0.75rem', color: 'var(--muted-dark)' }}>{(w.distance_km || 0).toFixed(1)} km from center</span>
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem', verticalAlign: 'top' }}>
+                        <span style={{ color: 'var(--muted-dark)' }}>Avg:</span> {formatCurrency(w.avg_52week_income || 0)} <br />
+                        <span style={{ color: 'var(--muted-dark)' }}>Pred:</span> <span style={{ color: 'var(--text-dark)' }}>{formatCurrency(w.weekly_income_predicted || 0)}</span>
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem', verticalAlign: 'top' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          fontSize: '0.7rem',
+                          fontWeight: 600,
+                          background: riskScore !== 'N/A' && parseFloat(riskScore) > 0.5 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                          color: riskScore !== 'N/A' && parseFloat(riskScore) > 0.5 ? 'var(--red)' : '#D97706'
+                        }}>
+                          {riskScore !== 'N/A' ? `${riskScore} Risk factor` : 'N/A'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem', verticalAlign: 'top' }}>
+                        {isEligible ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span style={{ display: 'inline-block', width: 'fit-content', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600, background: 'rgba(13, 122, 86, 0.1)', color: 'var(--green)' }}>Eligible</span>
+                            {w.eligibility_reasons && <span style={{ fontSize: '0.7rem', color: 'var(--success)', whiteSpace: 'wrap' }}>{w.eligibility_reasons.join(' • ')}</span>}
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span style={{ display: 'inline-block', width: 'fit-content', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600, background: 'rgba(239, 68, 68, 0.1)', color: 'var(--red)' }}>Not Eligible</span>
+                            {w.eligibility_reasons && w.eligibility_reasons.map((r, i) => (
+                                <span key={i} style={{ fontSize: '0.65rem', color: 'var(--red)', lineHeight: '1.2' }}>• {r}</span>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ padding: '0.75rem 0.5rem', verticalAlign: 'top', minWidth: '180px' }}>
+                        <strong style={{ color: w.payout_amount > 0 ? 'var(--accent)' : 'var(--muted-dark)', fontSize: '0.95rem' }}>{formatCurrency(w.payout_amount)}</strong>
+                        {w.payout_amount > 0 && w.payout_breakdown ? (
+                           <div style={{ fontSize: '0.7rem', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '6px' }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', borderBottom: '1px solid rgba(107, 45, 139, 0.05)', paddingBottom: '2px' }}>
+                                <span style={{ color: 'var(--muted-dark)' }}>Base Coverable:</span>
+                                <strong>{formatCurrency(pb.base_coverable_amount || pb.baseline_payout || 0)}</strong>
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', borderBottom: '1px solid rgba(107, 45, 139, 0.05)', paddingBottom: '2px' }}>
+                                <span style={{ color: 'var(--muted-dark)' }}>Loyalty Bonus:</span>
+                                <strong style={{ color: 'var(--green)' }}>+{(pb.loyalty_bonus_pct || 0) * 100}%</strong>
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', borderBottom: '1px solid rgba(107, 45, 139, 0.05)', paddingBottom: '2px' }}>
+                                <span style={{ color: 'var(--muted-dark)' }}>Slab Multiplier:</span>
+                                <strong>{(pb.slab_coverage_pct || 0) * 100}%</strong>
+                              </div>
+                           </div>
+                        ) : (
+                           <div style={{ fontSize: '0.7rem', color: 'var(--red)', marginTop: '4px', lineHeight: '1.4', background: 'rgba(239, 68, 68, 0.05)', padding: '4px 6px', borderRadius: '4px' }}>
+                              ✖ Failed eligibility checks
+                           </div>
+                        )}
+                      </td>
+                    </tr>
+                    {isEligible && (
+                      <tr style={{ background: 'rgba(107, 45, 139, 0.015)' }}>
+                        <td colSpan="6" style={{ padding: '0.5rem 1rem 1rem 1rem', borderBottom: '2px solid rgba(107, 45, 139, 0.1)' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', background: '#fff', padding: '1rem', borderRadius: '8px', border: '1px solid rgba(107, 45, 139, 0.1)' }}>
+                            <div>
+                              <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--muted-dark)', fontWeight: 600, letterSpacing: '0.5px' }}>Income Forecast</span>
+                              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-dark)', marginTop: '2px' }}>{formatCurrency(w.ml_predictions?.income_forecast?.ensemble || w.ml_predictions?.income_forecast || 0)}</div>
+                              <div style={{ fontSize: '0.65rem', color: 'var(--muted)', marginTop: '2px' }}>LSTM & SARIMAX output</div>
+                            </div>
+                            <div>
+                              <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--muted-dark)', fontWeight: 600, letterSpacing: '0.5px' }}>Fraud Prob</span>
+                              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: w.ml_predictions?.fraud_analysis?.fraud_probability > 0.3 ? 'var(--red)' : 'var(--text-dark)', marginTop: '2px' }}>
+                                {w.ml_predictions?.fraud_analysis?.fraud_probability ? (w.ml_predictions.fraud_analysis.fraud_probability * 100).toFixed(1) + '%' : 'N/A'}
+                              </div>
+                              <div style={{ fontSize: '0.65rem', color: 'var(--muted)', marginTop: '2px' }}>Trust Rating: {w.ml_predictions?.fraud_analysis?.trust_rating ? (w.ml_predictions?.fraud_analysis?.trust_rating * 100).toFixed(0) + '%' : 'N/A'}</div>
+                            </div>
+                            <div>
+                              <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--muted-dark)', fontWeight: 600, letterSpacing: '0.5px' }}>Behavior Score</span>
+                              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-dark)', marginTop: '2px' }}>
+                                {w.ml_predictions?.behavior_score?.behavior_score ? (w.ml_predictions.behavior_score.behavior_score * 100).toFixed(1) + '%' : 'N/A'}
+                              </div>
+                              <div style={{ fontSize: '0.65rem', color: 'var(--muted)', marginTop: '2px', textTransform: 'capitalize' }}>Tier: {w.ml_predictions?.behavior_score?.behavior_tier || 'N/A'}</div>
+                            </div>
+                            <div>
+                              <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--muted-dark)', fontWeight: 600, letterSpacing: '0.5px' }}>Math Breakdown</span>
+                              <div style={{ fontSize: '0.7rem', color: 'var(--purple-dark)', marginTop: '6px', lineHeight: '1.4' }}>
+                                {pb.breakdown || pb.explanation_string || "N/A"}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
         {isPredicting && !simRunning && (
           <div className="ai-scanner-container">
             <div className="ai-scanner-box">
@@ -542,31 +687,31 @@ const Dashboard = () => {
       <div className="charts-grid">
         <div className="chart-container glass-panel" style={{ padding: '1.25rem' }}>
           <div className="chart-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
-            <h3>Loss Ratios &amp; Predictive Outlook</h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--muted-dark)' }}>Track how our actual payouts compare against predicted risks over time!</p>
+            <h3>Financial Health &amp; Profitability Outlook</h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--muted-dark)' }}>Comparing our actual profit margins against predicted risk thresholds.</p>
           </div>
           <div style={{ height: '320px', paddingRight: '20px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={stats.lossRatioData}>
                 <defs>
-                  <linearGradient id="colorRatio" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--green)" stopOpacity={0.6} />
+                  <linearGradient id="colorMargin" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--green)" stopOpacity={0.4} />
                     <stop offset="95%" stopColor="var(--green)" stopOpacity={0} />
                   </linearGradient>
-                  <linearGradient id="colorPred" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--red)" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="var(--red)" stopOpacity={0} />
+                  <linearGradient id="colorRisk" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(107,45,139,0.1)" vertical={false} />
                 <XAxis dataKey="name" stroke="var(--muted-dark)" fontSize={11} tickLine={false} axisLine={false} dy={10} />
-                <YAxis stroke="var(--muted-dark)" tickFormatter={(v) => `${v}%`} fontSize={11} tickLine={false} axisLine={false} dx={-10} />
+                <YAxis domain={[90, 100]} stroke="var(--muted-dark)" tickFormatter={(v) => `${v}%`} fontSize={11} tickLine={false} axisLine={false} dx={-10} />
                 <Tooltip
                   contentStyle={{ backgroundColor: 'var(--surface-dark)', borderColor: 'var(--border-dark)', borderRadius: '8px', fontSize: '12px', color: 'var(--text-dark)' }}
                   itemStyle={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-dark)' }}
                 />
-                <Area type="monotone" dataKey="ratio" stroke="var(--green)" strokeWidth={2} fillOpacity={1} fill="url(#colorRatio)" name="Actual Loss Ratio %" />
-                <Area type="monotone" dataKey="predictions" stroke="var(--red)" strokeWidth={2} fillOpacity={1} fill="url(#colorPred)" name="Predictive Disruption Probability %" strokeDasharray="4 4" />
+                <Area type="monotone" dataKey="margin" stroke="var(--green)" strokeWidth={3} fillOpacity={1} fill="url(#colorMargin)" name="Net Profit Margin %" />
+                <Area type="monotone" dataKey="risk" stroke="#F59E0B" strokeWidth={2} fillOpacity={1} fill="url(#colorRisk)" name="Risk Sensitivity Index" strokeDasharray="5 5" />
               </AreaChart>
             </ResponsiveContainer>
           </div>

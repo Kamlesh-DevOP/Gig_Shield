@@ -84,11 +84,13 @@ def weather(city: str = "Chennai", scenario: Optional[str] = None):
 
     for area in areas:
         if scenario == "flood":
-            rainfall = random.randint(150, 250)
+            # Guaranteed to be > 22cm (220mm) to trigger 100% severity rules
+            rainfall = random.randint(220, 350)
         elif scenario == "cyclone":
-            rainfall = random.randint(200, 300)
+            # High intensity cyclone/rainfall
+            rainfall = random.randint(250, 450)
         else:
-            rainfall = random.randint(0, 120)
+            rainfall = random.randint(0, 80)
 
         reports.append({
             "station_id": f"IMD-{random.randint(1000,9999)}",
