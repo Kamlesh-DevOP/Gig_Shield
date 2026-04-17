@@ -10,7 +10,7 @@ import {
 import DisruptionTypeTabs from "./DisruptionTypeTabs";
 import CoverageMapTab from "./CoverageMap";
 
-const API = "http://localhost:8000";
+const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const fmt = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
 const isApproved = (d) => ["APPROVE", "auto_approve", "approved"].includes(String(d || "").toLowerCase().includes("approv") ? d : "") || String(d || "").toLowerCase().includes("approv");
 const normalizeDecision = (d) => isApproved(d) ? "APPROVE" : String(d || "REJECT").toUpperCase();

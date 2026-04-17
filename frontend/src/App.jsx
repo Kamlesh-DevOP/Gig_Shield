@@ -28,6 +28,7 @@ import AIDecisionTrace from "./AIDecisionTrace";
 import { Calculator } from "lucide-react";
 import B2BPartnerPortal from "./B2BPartnerPortal";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 // ─── RICH MOCK DATA ───────────────────────────────────────────────────────────
 // All three partners: Slab 3 (Premium, 100% cover, 4% rate)
 // avg = ₹8,000 → base premium = 8001 × 4% = ₹320
@@ -561,7 +562,7 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout, paidForNextWe
     setPayoutLoading(true);
     try {
       const workerId = partnerId.startsWith("DB") ? parseInt(partnerId.replace("DB", "")) : 1;
-      const res = await fetch("http://localhost:8000/api/payout/initiate", {
+      const res = await fetch(`${API_BASE_URL}/api/payout/initiate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -584,7 +585,7 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout, paidForNextWe
   const handleResetPayout = async () => {
     if (!payoutState) return;
     try {
-      await fetch("http://localhost:8000/api/payout/reset", {
+      await fetch(`${API_BASE_URL}/api/payout/reset`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ payout_id: payoutState.payout_id }),
@@ -1353,7 +1354,7 @@ function ClaimPayoutAction({ partner, pricing, evaluation }) {
     setLoading(true);
     try {
       const workerId = partner.id?.startsWith("DB") ? parseInt(partner.id.replace("DB", "")) : 1;
-      const res = await fetch("http://localhost:8000/api/payout/initiate", {
+      const res = await fetch(`${API_BASE_URL}/api/payout/initiate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1412,7 +1413,7 @@ function ClaimPayoutAction({ partner, pricing, evaluation }) {
           <button
             onClick={async () => {
               try {
-                await fetch("http://localhost:8000/api/payout/reset", {
+                await fetch(`${API_BASE_URL}/api/payout/reset`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ payout_id: payoutState.payout_id }),
@@ -1972,7 +1973,7 @@ function AppContent() {
     if (partnerId && PARTNERS[partnerId]?.dbRecord) {
       setEvalLoading(true);
       const partner = PARTNERS[partnerId];
-      fetch("http://localhost:8000/api/evaluate_worker", {
+      fetch(`${API_BASE_URL}/api/evaluate_worker`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
