@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="admin_side/src/assets/logo1.png" alt="GIC Logo" width="250" />
+  <img src="admin_side/src/assets/logo.jpeg" alt="GIC Logo" width="250" />
 
   # 🛡️ Gig Insurance Company (GIC)
   
