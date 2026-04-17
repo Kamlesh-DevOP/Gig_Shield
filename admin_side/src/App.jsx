@@ -4,22 +4,23 @@ import { LayoutDashboard, Map as MapIcon } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import RegionMap from './pages/RegionMap';
 
+import logo from './assets/logo1.png';
+
 const Sidebar = () => {
   const location = useLocation();
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-logo" style={{ padding: '0 0.5rem', marginBottom: '3.5rem' }}>
-        <h1 style={{ 
-          fontSize: '2.5rem', 
-          fontWeight: 900, 
-          letterSpacing: '-2.5px',
-          fontFamily: "'Poppins', sans-serif",
-          background: 'linear-gradient(135deg, #10B981, #C4B5FD)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          lineHeight: '1'
-        }}>GIC</h1>
+      <div className="sidebar-logo" style={{ padding: '0', marginBottom: '3rem', display: 'flex', justifyContent: 'center' }}>
+        <img 
+          src={logo} 
+          alt="GIC Logo" 
+          style={{ 
+            height: '110px', 
+            width: 'auto',
+            objectFit: 'contain'
+          }} 
+        />
       </div>
 
       <nav className="nav-links">
