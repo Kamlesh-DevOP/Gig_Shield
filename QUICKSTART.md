@@ -13,16 +13,34 @@
 | **npm** | 9+ | `npm --version` |
 | **Git** | Any | `git --version` |
 
-### Required API Keys
+### 🔑 Required API Keys & Generation Steps
 
-| Key | Required For | Get It From |
-|-----|-------------|-------------|
-| `GROQ_API_KEY` | LLM agents (LangGraph / LangChain orchestrator) | [console.groq.com](https://console.groq.com) |
-| `PINECONE_API_KEY` | Vector store (production RAG) | [app.pinecone.io](https://app.pinecone.io) |
-| `PINECONE_HOST` | Pinecone serverless index URL | Pinecone Console → Index → Host |
-| `HF_TOKEN` | Embedding model download | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
-| `VITE_SUPABASE_URL` | Frontend auth & persistence | [supabase.com](https://supabase.com) → Project → Settings → API |
-| `VITE_SUPABASE_ANON_KEY` | Frontend auth & persistence | Supabase → Project → Settings → API |
+You can find `.env.example` files in both the project root and the `frontend/` directories. Here is how to generate the required variables:
+
+**1. Database & Authentication (Supabase)**
+- Go to [Supabase](https://supabase.com) → Project Settings (gear icon) → **API**.
+- Copy the `Project URL` for `VITE_SUPABASE_URL`.
+- Copy the `anon` `public` key for `VITE_SUPABASE_ANON_KEY`.
+
+**2. Multi-Agent LLM (Groq)**
+- Go to the [Groq Console](https://console.groq.com/keys).
+- Click **Create API Key** and copy it into `GROQ_API_KEY`.
+
+**3. Vector Database / RAG (Pinecone)**
+- Go to [Pinecone Console](https://app.pinecone.io) and create a Serverless index. 
+- Under **API Keys**, create a key for `PINECONE_API_KEY`.
+- Copy your precise index name for `PINECONE_INDEX_NAME`.
+- Under your index details, copy the `Host` URL for `PINECONE_HOST`.
+
+**4. Embedding Models (Hugging Face)**
+- Go to [Hugging Face Settings](https://huggingface.co/settings/tokens).
+- Create a read-only token and paste it into `HF_TOKEN`.
+
+**5. Payments Integration (Razorpay)**
+*(Optional: For testing premium checkouts)*
+- Log in to the [Razorpay Dashboard](https://dashboard.razorpay.com) and switch to **Test Mode**.
+- Go to **Account & Settings** → **API Keys** → **Generate Test Key**.
+- Copy the `Key Id` and `Key Secret` to both your backend and frontend `.env` Razorpay variables.
 
 > **Minimum viable demo**: The classic orchestrator works **without** `GROQ_API_KEY`. LangGraph/LangChain agents require it. ChromaDB is used as a local vector store fallback if Pinecone is not configured.
 
@@ -34,7 +52,7 @@
 
 ```bash
 git clone https://github.com/Status-Code-401/GIG_INSURANCE_COMPANY.git
-cd GIC_ML-Pipeline
+cd GIG_INSURANCE_COMPANY
 ```
 
 ### 2. Backend — Python Environment
@@ -58,7 +76,7 @@ pip install -r requirements.txt
 
 ### 3. Backend — Environment Variables
 
-Create a `.env` file in the **project root** (`GIC_ML-Pipeline/.env`):
+Create a `.env` file in the **project root** (`GIG_INSURANCE_COMPANY/.env`):
 
 ```env
 # ─── LLM (powers LangGraph + LangChain agent reasoning) ───
@@ -105,12 +123,12 @@ VITE_SUPABASE_ANON_KEY="your_supabase_anon_key"
 
 ## 🏃 Running the App
 
-You need **two terminals** — one for the backend, one for the frontend.
+You need **four terminals** — for the backend, frontend, MCP server, and admin dashboard.
 
 ### Terminal 1 — Start Backend (FastAPI)
 
 ```bash
-# From the project root: GIC_ML-Pipeline/
+# From the project root: GIG_INSURANCE_COMPANY/
 .\src\venv\Scripts\activate          # Windows
 # source src/venv/bin/activate       # macOS/Linux
 
@@ -129,11 +147,29 @@ On startup the API initializes in this order:
 ### Terminal 2 — Start Frontend (Vite + React)
 
 ```bash
-# From the frontend folder: GIC_ML-Pipeline/frontend/
+# From the frontend folder: GIG_INSURANCE_COMPANY/frontend/
 npm run dev
 ```
 
 The frontend runs at: **http://localhost:5173**
+
+### Terminal 3 — Start MCP Server
+
+```bash
+# From the project root: GIG_INSURANCE_COMPANY/
+.\src\venv\Scripts\activate          # Windows
+# source src/venv/bin/activate       # macOS/Linux
+
+python scripts/start_mcp_server.py
+```
+
+### Terminal 4 — Start Admin Dashboard
+
+```bash
+# From the admin_side folder: GIG_INSURANCE_COMPANY/admin_side/
+cd admin_side
+npm run dev
+```
 
 ---
 
@@ -473,7 +509,7 @@ Every decision is written to **all available** stores for auditability.
 ## 🏗️ Project Structure
 
 ```
-GIC_ML-Pipeline/
+GIG_INSURANCE_COMPANY/
 ├── app.py                    # FastAPI entrypoint (run with uvicorn)
 ├── main.py                   # ML pipeline runner (training, inference)
 ├── requirements.txt          # Python dependencies

@@ -1,48 +1,49 @@
-# Gig Insurance Company - An Autonomous Parametric Income Insurance for Gig Workers
+<div align="center">
+  <img src="admin_side/src/assets/logo1.png" alt="GIC Logo" width="250" />
 
---- 
+  # 🛡️ Gig Insurance Company (GIC)
+  
+  **An Autonomous Parametric Income Insurance for Gig Workers**
 
-## Table of Contents
-* [1. Project Aim](#1-project-aim)
-* [2. Target Market](#2-target-market)
-* [3. Business & Operational Strategy](#3-business--operational-strategy)
-* [4. Benefits to Society](#4-benefits-to-society)
-* [5. Categorization of Parametric Disruptions](#5-categorization-of-parametric-disruptions)
-* [6. Business Architecture & Data Integration Pipeline](#6-business-architecture--data-integration-pipeline)
-* [7. Eligibility Criteria & Onboarding Validation](#7-eligibility-criteria--onboarding-validation)
-* [8. Dynamic Pricing Architecture & Insurance Slabs](#8-dynamic-pricing-architecture--insurance-slabs)
-* [9. Predictive Premium Calculation & Actuarial Variables](#9-predictive-premium-calculation--actuarial-variables)
-* [10. Rewards, Penalties, & Anti-Exploitation Protocols](#10-rewards-penalties--anti-exploitation-protocols)
-* [11. Autonomous Insurance Roll-out & The 75% Income Threshold](#11-autonomous-insurance-roll-out--the-75-income-threshold)
-* [12. Parametric Disruption Thresholds](#12-parametric-disruption-thresholds)
-* [13. Calculated Payout Scenarios (Case Studies)](#13-calculated-payout-scenarios-case-studies)
-* [14. Fraud Detection & Risk Mitigation Mechanisms](#14-fraud-detection--risk-mitigation-mechanisms)
-* [15. Predictive Modeling & Explainable AI (XAI)](#15-predictive-modeling--explainable-ai-xai)
-* [16. Autonomous Multi-Agent AI System Architecture](#16-autonomous-multi-agent-ai-system-architecture)
-* [17. End-To-End Workflow](#17-end-to-end-workflow)
-* [18. MARKET CRASH: Adversarial Defense & Anti-Spoofing Strategy](#18-market-crash-adversarial-defense--anti-spoofing-strategy)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+  [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
+  [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
+  [![React](https://img.shields.io/badge/React-18.2+-blue.svg)](https://react.dev/)
+  [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+
+</div>
 
 ---
-Phase 2 - MVP DEMO: [https://youtu.be/R_gsjeeOfl4](https://youtu.be/R_gsjeeOfl4)
-Backend URL - Run this before opening the vercel app: [https://gig-insurance-company.onrender.com/](https://gig-insurance-company.onrender.com/)
-Vercel App - [https://gig-insurance-company-gic.vercel.app/](https://gig-insurance-company-gic.vercel.app/)
 
-Prototype Demo: [https://youtu.be/hLz2ZEhvils](https://youtu.be/hLz2ZEhvils)
+## 🚀 Quick Navigation
 
-Solution explanation + Financial model + Technical architecture: [https://youtu.be/8LG6JR4Q7rM](https://youtu.be/8LG6JR4Q7rM)
+- 📖 **[Quickstart Guide](./QUICKSTART.md)**: Find step-by-step instructions to run the GIC backend, frontend, MCP Server, and Admin Dashboard locally.
+- 🏗️ **[Project Overview](./project_overview.md)**: Deep dive into our system architecture, Multi-Agent pipelines, and data models.
 
-## 1. Project Aim
+---
+
+## 🔗 Demos & Resources
+
+- **Phase 2 - MVP DEMO**: [Watch on YouTube](https://youtu.be/R_gsjeeOfl4)
+- **Backend URL**: [gig-insurance-company.onrender.com](https://gig-insurance-company.onrender.com/) *(Run this before opening the vercel app)*
+- **Vercel App**: [gig-insurance-company-gic.vercel.app](https://gig-insurance-company-gic.vercel.app/)
+- **Prototype Demo**: [Watch on YouTube](https://youtu.be/hLz2ZEhvils)
+- **Solution explanation + Financial model + Architecture**: [Watch on YouTube](https://youtu.be/8LG6JR4Q7rM)
+
+---
+
+## 🎯 1. Project Aim
 
 The primary objective of this project is to provide income insurance for gig workers, protecting them against income loss caused by external disruptions. To achieve this, we are developing a fully autonomous Parametric Insurance Model.
 
 **Persona chosen:** Quick-Commerce Businesses
 
-## 2. Target Market
+## 🌍 2. Target Market
 
 - **Primary Demographic:** Gig workers in India (projected to reach approximately 23 million by 2030).
 - **Economic Scale:** The Indian gig economy is projected to be valued at $455 billion by FY2029-30.
 
-## 3. Business & Operational Strategy
+## 💼 3. Business & Operational Strategy
 
 ### Operating Profit Expectation
 
@@ -65,14 +66,14 @@ This represents a first-of-its-kind insurance system in India.
 - **Pricing Leverage:** Entering the market without direct precedent allows us to establish the initial premium pricing structures.
 - **Market Capture:** Our initial strategy leverages this unique market opportunity to capture maximum market share. As market dynamics shift over time, our pricing system is designed to adapt dynamically.
 
-## 4. Benefits to Society
+## 🤝 4. Benefits to Society
 
 This model provides crucial social security to a highly uncertain gig economy.
 
 - **Economic Protection:** The gig economy, despite its projected $455 billion valuation by FY2030, currently operates on the verge of collapse when faced with even a single external uncertainty.
 - **Livelihood Security:** Our model provides tangible income security to gig workers, thereby protecting a massive and vulnerable demographic that serves as a major contributor to the national economy.
 
-## 5. Categorization of Parametric Disruptions
+## 🌩️ 5. Categorization of Parametric Disruptions
 
 The insurance model is engineered to trigger autonomously when gig workers experience a quantifiable loss of income resulting from specific, pre-defined external disruptions. These parametric triggers are strictly categorized into the following risk sectors:
 
@@ -89,7 +90,7 @@ The insurance model is engineered to trigger autonomously when gig workers exper
     - **Telecommunications Outages:** Widespread network downtime or internet service provider (ISP) blackouts.
     - **Platform-Specific Technical Glitches:** Internal application failures, server downtimes, or API crashes originating from the partner platform (e.g., the delivery app itself going offline).
 
-## 6. Business Architecture & Data Integration Pipeline
+## 🏗️ 6. Business Architecture & Data Integration Pipeline
 
 We establish direct technological and operational partnerships with gig economy aggregators (e.g., Zepto, Blinkit).
 
@@ -99,7 +100,7 @@ To ensure accuracy in dynamic pricing and to facilitate instantaneous, fraud-pro
 - **Comprehensive Worker Databases:** Required to establish baseline financial profiles, specifically to calculate the historical average income of each individual worker, which serves as the foundation for premium calculation.
 - **Granular Activity Logs:** Continuous ingestion of worker GPS coordinates, active login hours, and order delivery histories. This data is critical for validating the worker's presence in a disrupted zone and forms the basis of our fraud-detection mechanisms.
 
-## 7. Eligibility Criteria & Onboarding Validation
+## 📋 7. Eligibility Criteria & Onboarding Validation
 
 During the initial user onboarding phase, the system conducts an evaluation to classify the employment status of the gig worker.
 
@@ -108,7 +109,7 @@ During the initial user onboarding phase, the system conducts an evaluation to c
     - Part-time delivery partners who possess no alternative means of external income.
 - This rigorous eligibility check ensures that the risk pool consists only of individuals whose primary livelihood is genuinely threatened by gig-economy disruptions.
 
-## 8. Dynamic Pricing Architecture & Insurance Slabs
+## 💰 8. Dynamic Pricing Architecture & Insurance Slabs
 
 The platform abandons traditional static insurance premiums in favor of a high-frequency, dynamic weekly pricing model.
 
@@ -119,7 +120,7 @@ The platform abandons traditional static insurance premiums in favor of a high-f
     - **Slab 2 (75% Coverage):** The standard tier. The premium operates exactly at the base rate of **4.0%** of the weekly average income.
     - **Slab 3 (100% Coverage):** Designed for comprehensive income protection. The premium is set at **4.8%** of the weekly average income (representing a 20% increase from the standard premium).
 
-## 9. Predictive Premium Calculation & Actuarial Variables
+## 📈 9. Predictive Premium Calculation & Actuarial Variables
 
 The core predictive model dynamically recalculates the premium every week by evaluating past behavioral data, current environmental states, and future forecasts.
 
@@ -131,7 +132,7 @@ To ensure precision and financial viability, the model analyzes the following st
 - **Risk-Based Forecasting:** If external monitoring APIs predict an upcoming disruption (e.g., severe floods expected next week), the risk assessment engine autonomously increases the premium for that cycle.
 - **Loyalty & Flexibility:** Users enrolled continuously from the beginning of a cycle maintain baseline plans. However, the system includes provisions for users to switch coverage slabs, with the new dynamic premium weighted mathematically against their past premium payment history.
 
-## 10. Rewards, Penalties, & Anti-Exploitation Protocols
+## ⚖️ 10. Rewards, Penalties, & Anti-Exploitation Protocols
 
 The system enforces strict financial discipline through an automated incentive and penalty structure:
 
@@ -140,7 +141,7 @@ The system enforces strict financial discipline through an automated incentive a
 - **8-Week Cooling Period:** To entirely eliminate adverse selection (the practice of workers enrolling only days before a forecasted disruption, such as a cyclone), mid-cycle enrollees are subjected to a mandatory 8-week cooling period. A worker must successfully pay premiums for a minimum of 8 weeks before they are eligible to receive a claim.
 - **Fraud Mitigation:** Applications attempting to exploit the platform by securing insurance solely during times of pre-predicted adversities are autonomously rejected by the system. Furthermore, detected fraudulent activity (like GPS spoofing) drastically impacts the user's fraud rating, directly increasing their premium costs.
 
-## 11. Autonomous Insurance Roll-out & The 75% Income Threshold
+## 🤖 11. Autonomous Insurance Roll-out & The 75% Income Threshold
 
 The payout sequence operates completely autonomously across predefined systemic layers without human intervention.
 
@@ -156,7 +157,7 @@ A payout is solely triggered if the disruption causes the worker's income to dro
 - **Why 25%?** Gig economy earnings are inherently cyclic. Statistical modeling indicates that an income variance of up to 25% aligns with standard deviations and can typically be recovered by the worker in subsequent operational cycles.
 - **Abnormal Loss Coverage:** The model only covers *abnormal* losses that breach this standard deviation. If an external disruption occurs, but the worker's net income loss is 25% or less, no payout is initiated. The maximum coverable amount is exclusively the financial difference between the actual earned income and the 75% threshold limit.
 
-## 12. Parametric Disruption Thresholds
+## 🌡️ 12. Parametric Disruption Thresholds
 
 Insurance payouts strictly depend on the validated severity of the external event: (Currently identified parameters for rain, will develop the parameters for other disruptions in the course of building)
 
@@ -170,7 +171,7 @@ Insurance payouts strictly depend on the validated severity of the external even
 - **Cyclones & Landslides:** Payouts scale based on the severity of official alerts issued by regional meteorological departments and the exact coordinates of structural impacts.
 - **Societal & Technical Issues:** Scaled proportionately based on the precise number of hours or days the operational service or region was disabled.
 
-## 13. Calculated Payout Scenarios (Case Studies)
+## 📝 13. Calculated Payout Scenarios (Case Studies)
 
 ### Scenario 1: Normal Condition
 
@@ -219,7 +220,7 @@ Insurance payouts strictly depend on the validated severity of the external even
 - **Final Payout Calculation:** 80% of Rs. 1695 = Rs. 1356 (weather disruption coverage applied to the adjusted coverable loss).
 - **Final Roll-out Amount: Rs. 1356**
 
-## 14. Fraud Detection & Risk Mitigation Mechanisms
+## 🕵️‍♂️ 14. Fraud Detection & Risk Mitigation Mechanisms
 
 To maintain the integrity of the risk pool, the engine utilizes a continuous, multi-layered fraud detection system:
 
@@ -230,7 +231,7 @@ To maintain the integrity of the risk pool, the engine utilizes a continuous, mu
     - If a rating falls below 2.5, the user is penalized with a baseline 1% extra premium.
     - For every subsequent 0.1 reduction in the rating below 2.5, an additional 0.1% is dynamically added to their premium.
 
-## 15. Predictive Modeling & Explainable AI (XAI)
+## 🧠 15. Predictive Modeling & Explainable AI (XAI)
 
 The system moves beyond traditional black-box actuarial tables by deploying a robust, highly accurate predictive model driven by Explainable AI (XAI). This ensures complete transparency, allowing the system to justify every calculated number and maintain trust with users.
 
@@ -239,7 +240,7 @@ The system moves beyond traditional black-box actuarial tables by deploying a ro
 - **Statistical Inputs:** Computations incorporate moving averages of income, correlation coefficients, standard deviations, default rates, on-time payment metrics, and Z-scores.
 - **Risk Assessment Integration:** Past statistical scores are merged with real-time situational monitoring and predictive seasonality trends to autonomously alter the upcoming week's premium.
 
-## 16. Autonomous Multi-Agent AI System Architecture
+## 🕸️ 16. Autonomous Multi-Agent AI System Architecture
 
 The platform is powered by an autonomous, multi-agent artificial intelligence ecosystem. By converging Retrieval-Augmented Generation (RAG) with the Model Context Protocol (MCP), the system achieves a powerful hybrid intelligence capable of making context-aware, real-time decisions without human intervention.
 
@@ -298,7 +299,7 @@ Developed utilizing the LangChain/Ollama framework, the ecosystem is composed of
         - Historical records
         - Transactional consistency
 
-# 17. End-to-End Workflow
+## 🔄 17. End-to-End Workflow
 
 ## Step 1: Continuous Monitoring
 
@@ -394,7 +395,7 @@ Loop:
     - Stored in SQL / output DB
     - Passed to ML pipeline for Premium calculation and Coverage calculations
 
-# 18. MARKET CRASH: Adversarial Defense & Anti-Spoofing Strategy
+## 🛡️ 18. MARKET CRASH: Adversarial Defense & Anti-Spoofing Strategy
 
 ## Objective
 
