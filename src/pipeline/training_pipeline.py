@@ -27,7 +27,7 @@ from src.utils.schema import ensure_worker_columns
 
 class MLTrainingPipeline:
     """
-    End-to-end training pipeline for all GigShield models
+    End-to-end training pipeline for all GIC models
     """
     
     def __init__(self, data_path: str):

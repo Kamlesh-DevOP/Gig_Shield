@@ -1,5 +1,5 @@
 """
-GigShield MCP Layer — HTTP Tool Server (port 5100)
+GIC MCP Layer — HTTP Tool Server (port 5100)
 ===================================================
 
 Acts as the MCP Server in the Host ↔ MCP Server ↔ External APIs architecture.
@@ -110,7 +110,7 @@ NEUTRAL_RISK = {
 # FastAPI app
 # ─────────────────────────────────────────────────────────────
 app = FastAPI(
-    title="GigShield MCP Layer",
+    title="GIC MCP Layer",
     description="Real-time Weather, News, and Web-Crawl tools for dynamic gig-worker risk assessment.",
     version="2.0.0",
 )
@@ -630,7 +630,7 @@ def _tool_analyze_localized_risk(location: str, sector: str) -> Dict[str, Any]:
         "hazards_found": crawl.get("hazards_found", []),
         "formula": f"P_final = P_base × {r_weather} (weather) × {r_market} (market) = P_base × {final_multiplier}",
         "analyzed_at": datetime.now(timezone.utc).isoformat(),
-        "source": "GigShield_MCP_Layer",
+        "source": "GIC_MCP_Layer",
     }
 
 
@@ -674,7 +674,7 @@ def health():
     """Service health and API key status."""
     return {
         "status": "online",
-        "service": "GigShield MCP Layer",
+        "service": "GIC MCP Layer",
         "version": "2.0.0",
         "tools": list(TOOL_REGISTRY.keys()),
         "api_keys": {
@@ -742,6 +742,6 @@ def call_tool(req: ToolCallRequest):
 # ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     port = int(os.getenv("MCP_SERVER_PORT", "5100"))
-    logger.info("🚀 GigShield MCP Layer starting on port %d", port)
+    logger.info("🚀 GIC MCP Layer starting on port %d", port)
     logger.info("   Tools: %s", ", ".join(TOOL_REGISTRY.keys()))
     uvicorn.run("server:app", host="0.0.0.0", port=port, reload=False, app_dir=os.path.dirname(__file__))

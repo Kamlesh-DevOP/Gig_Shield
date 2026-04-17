@@ -24,22 +24,22 @@ CREATE INDEX IF NOT EXISTS idx_payout_trace    ON payout_transactions (claim_tra
 CREATE INDEX IF NOT EXISTS idx_payout_rzp_id   ON payout_transactions (razorpay_payout_id);
 
 
--- 2. Add Razorpay IDs to gigshield_workers for caching
+-- 2. Add Razorpay IDs to gic_workers for caching
 --    These prevent re-creating contacts/fund accounts on every payout.
 DO $$
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'gigshield_workers' AND column_name = 'razorpay_contact_id'
+        WHERE table_name = 'gic_workers' AND column_name = 'razorpay_contact_id'
     ) THEN
-        ALTER TABLE gigshield_workers ADD COLUMN razorpay_contact_id TEXT;
+        ALTER TABLE gic_workers ADD COLUMN razorpay_contact_id TEXT;
     END IF;
 
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_name = 'gigshield_workers' AND column_name = 'razorpay_fund_account_id'
+        WHERE table_name = 'gic_workers' AND column_name = 'razorpay_fund_account_id'
     ) THEN
-        ALTER TABLE gigshield_workers ADD COLUMN razorpay_fund_account_id TEXT;
+        ALTER TABLE gic_workers ADD COLUMN razorpay_fund_account_id TEXT;
     END IF;
 END $$;
 

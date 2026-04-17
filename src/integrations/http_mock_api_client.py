@@ -1,15 +1,15 @@
 """
 HTTP client for the local FastAPI mock in `mock_api/mock_api.py`.
 
-Set GIGSHIELD_MOCK_API_BASE=http://127.0.0.1:8000 (no trailing slash) and run:
+Set GIC_MOCK_API_BASE=http://127.0.0.1:8000 (no trailing slash) and run:
   uvicorn mock_api.mock_api:app --host 127.0.0.1 --port 8000
 
 Aggregates /api/weather, /api/news, /api/telecom, /api/platform into the same bundle
 shape as MockMCPClient so MonitorAgent needs no changes.
 
 Env:
-  GIGSHIELD_MOCK_API_BASE   — if set, default_mcp_client() uses this client
-  GIGSHIELD_MOCK_SCENARIO   — maps to mock_api query scenario (heavy_rain→flood, etc.)
+  GIC_MOCK_API_BASE   — if set, default_mcp_client() uses this client
+  GIC_MOCK_SCENARIO   — maps to mock_api query scenario (heavy_rain→flood, etc.)
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ _SCENARIO_TO_API: Dict[str, Optional[str]] = {
 
 
 def _internal_scenario() -> str:
-    return (os.getenv("GIGSHIELD_MOCK_SCENARIO") or "heavy_rain").strip().lower()
+    return (os.getenv("GIC_MOCK_SCENARIO") or "heavy_rain").strip().lower()
 
 
 def _api_weather_scenario(internal: str) -> Optional[str]:

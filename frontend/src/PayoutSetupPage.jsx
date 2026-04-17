@@ -28,7 +28,7 @@ export default function PayoutSetupPage({ workerId, onComplete, onBack }) {
       if (!workerId) return;
       try {
         const { data, error } = await supabase
-          .from("gigshield_workers")
+          .from("gic_workers")
           .select("payout_method, upi_id, bank_name, account_number, ifsc_code, account_holder")
           .eq("worker_id", parseInt(workerId, 10))
           .single();
@@ -93,7 +93,7 @@ export default function PayoutSetupPage({ workerId, onComplete, onBack }) {
       };
 
       const { error: updateError } = await supabase
-        .from("gigshield_workers")
+        .from("gic_workers")
         .update(payload)
         .eq("worker_id", parseInt(workerId, 10));
 

@@ -1,5 +1,5 @@
 """
-Mock MCP / partner API layer for GigShield workflow simulation.
+Mock MCP / partner API layer for GIC workflow simulation.
 
 Placement (per architecture doc):
   External APIs → MCP Layer → MonitorAgent → ValidationAgent → RAG → …
@@ -8,9 +8,9 @@ This module stands in for live Weather, News, Inventory, and Platform streams un
 real B2B2C integrations exist. The orchestrators inject MockMCPClient into MonitorAgent.
 
 Env:
-  GIGSHIELD_MOCK_API_BASE  — if set (e.g. http://127.0.0.1:8000), use HttpMockApiMCPClient against mock_api
-  GIGSHIELD_USE_MOCK_MCP   — default true; set false to use MonitorAgent stubs only
-  GIGSHIELD_MOCK_SCENARIO  — heavy_rain | clear | heat | cyclone | strike (default heavy_rain)
+  GIC_MOCK_API_BASE  — if set (e.g. http://127.0.0.1:8000), use HttpMockApiMCPClient against mock_api
+  GIC_USE_MOCK_MCP   — default true; set false to use MonitorAgent stubs only
+  GIC_MOCK_SCENARIO  — heavy_rain | clear | heat | cyclone | strike (default heavy_rain)
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ _MOCK_CLAIM_LOG: List[Dict[str, Any]] = []
 
 
 def _scenario() -> str:
-    return (os.getenv("GIGSHIELD_MOCK_SCENARIO") or "heavy_rain").strip().lower()
+    return (os.getenv("GIC_MOCK_SCENARIO") or "heavy_rain").strip().lower()
 
 
 class MockMCPClient:
@@ -113,7 +113,7 @@ def mock_claim_log_snapshot() -> List[Dict[str, Any]]:
 
 
 def should_use_mock_mcp() -> bool:
-    return os.getenv("GIGSHIELD_USE_MOCK_MCP", "true").strip().lower() in ("1", "true", "yes", "on")
+    return os.getenv("GIC_USE_MOCK_MCP", "true").strip().lower() in ("1", "true", "yes", "on")
 
 
 def default_mcp_client() -> Optional[Union[MockMCPClient, "HttpMockApiMCPClient", "RealTimeMCPClient"]]:
@@ -125,7 +125,7 @@ def default_mcp_client() -> Optional[Union[MockMCPClient, "HttpMockApiMCPClient"
         return RealTimeMCPClient(server_url=mcp_url)
 
     # Priority 2: HTTP mock API server
-    base = (os.getenv("GIGSHIELD_MOCK_API_BASE") or "").strip().rstrip("/")
+    base = (os.getenv("GIC_MOCK_API_BASE") or "").strip().rstrip("/")
     if base:
         from src.integrations.http_mock_api_client import HttpMockApiMCPClient
 

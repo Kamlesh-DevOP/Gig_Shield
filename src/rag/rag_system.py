@@ -38,7 +38,7 @@ def _resolve_embedding_model_name(explicit: str | None, *, for_provider: str) ->
     For Pinecone, prefer auto-detect via describe_index in VectorStore; this path is used for Chroma
     or when no index metadata is available.
     """
-    env_model = (os.getenv("GIGSHIELD_EMBEDDING_MODEL") or os.getenv("VECTOR_EMBEDDING_MODEL") or "").strip()
+    env_model = (os.getenv("GIC_EMBEDDING_MODEL") or os.getenv("VECTOR_EMBEDDING_MODEL") or "").strip()
     default = VECTOR_STORE_CONFIG["embedding_model"]
     if explicit and str(explicit).strip():
         return str(explicit).strip()
@@ -79,10 +79,10 @@ def _pinecone_index_dimension(pc: Any, index_name: str) -> int | None:
 def _embedding_model_for_pinecone_index(pc: Any, index_name: str) -> tuple[str, int | None]:
     """
     Pick SentenceTransformer id to match index dimension.
-    Priority: GIGSHIELD_EMBEDDING_MODEL / VECTOR_EMBEDDING_MODEL → describe_index dimension →
+    Priority: GIC_EMBEDDING_MODEL / VECTOR_EMBEDDING_MODEL → describe_index dimension →
     PINECONE_INDEX_DIMENSION → default MiniLM (384).
     """
-    env_model = (os.getenv("GIGSHIELD_EMBEDDING_MODEL") or os.getenv("VECTOR_EMBEDDING_MODEL") or "").strip()
+    env_model = (os.getenv("GIC_EMBEDDING_MODEL") or os.getenv("VECTOR_EMBEDDING_MODEL") or "").strip()
     if env_model:
         return env_model, None
 
@@ -101,7 +101,7 @@ def _embedding_model_for_pinecone_index(pc: Any, index_name: str) -> tuple[str, 
 
     if dim is not None:
         raise ValueError(
-            f"Pinecone index dimension is {dim}; no built-in embedding preset. Set GIGSHIELD_EMBEDDING_MODEL "
+            f"Pinecone index dimension is {dim}; no built-in embedding preset. Set GIC_EMBEDDING_MODEL "
             f"to a Sentence-Transformers model that outputs {dim} dimensions."
         )
 
@@ -169,7 +169,7 @@ class VectorStore:
             )
         pc = Pinecone(api_key=api_key)
         host = (os.getenv("PINECONE_HOST") or os.getenv("PINECONE_INDEX_HOST") or "").strip().rstrip("/")
-        index_name = os.getenv("PINECONE_INDEX_NAME", self.config["pinecone"].get("index_name", "gigshield-index"))
+        index_name = os.getenv("PINECONE_INDEX_NAME", self.config["pinecone"].get("index_name", "gic-index"))
 
         model_name, dim_seen = _embedding_model_for_pinecone_index(pc, index_name)
         self.embedder = EmbeddingGenerator(model_name=model_name, for_provider="pinecone")
@@ -186,7 +186,7 @@ class VectorStore:
             print(
                 "[VectorStore] If upserts fail with dimension mismatch, set PINECONE_INDEX_NAME in .env "
                 "to the exact index name from the Pinecone console (so we can describe_index), or set "
-                "PINECONE_INDEX_DIMENSION=1024 / GIGSHIELD_EMBEDDING_MODEL=intfloat/e5-large-v2"
+                "PINECONE_INDEX_DIMENSION=1024 / GIC_EMBEDDING_MODEL=intfloat/e5-large-v2"
             )
 
     def add_documents(self, documents: List[Dict[str, Any]], category: str) -> None:

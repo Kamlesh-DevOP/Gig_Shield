@@ -96,9 +96,9 @@ HF_TOKEN="your_huggingface_token_here"
 # SUPABASE_SERVICE_ROLE_KEY="your_service_role_key"
 
 # ─── MCP Mock Layer ───
-# GIGSHIELD_USE_MOCK_MCP="true"           # default: true
-# GIGSHIELD_MOCK_SCENARIO="heavy_rain"    # heavy_rain | cyclone | heat | strike | clear
-# GIGSHIELD_MOCK_API_BASE=""              # set to http://127.0.0.1:8000 to use HTTP mock APIs
+# GIC_USE_MOCK_MCP="true"           # default: true
+# GIC_MOCK_SCENARIO="heavy_rain"    # heavy_rain | cyclone | heat | strike | clear
+# GIC_MOCK_API_BASE=""              # set to http://127.0.0.1:8000 to use HTTP mock APIs
 ```
 
 ### 4. Frontend — Install Dependencies
@@ -141,7 +141,7 @@ Wait for the models to load (you'll see "✓ All models loaded" and "Uvicorn run
 On startup the API initializes in this order:
 1. **InferencePipeline** — loads 6 trained ML model artifacts from `models/`
 2. **VectorStore** — connects to Pinecone (or creates local ChromaDB) and populates the knowledge base
-3. **Classic GigShieldOrchestrator** — ready immediately (no LLM needed)
+3. **Classic GICOrchestrator** — ready immediately (no LLM needed)
 4. **LangGraph Orchestrator** — requires `GROQ_API_KEY`; skipped if key is missing
 
 ### Terminal 2 — Start Frontend (Vite + React)
@@ -308,7 +308,7 @@ Agents in **Layer 4** (Fraud, Risk, Rules) run in **parallel** via `asyncio.gath
 
 GIC offers **three** progressively-richer orchestration strategies:
 
-### 1. Classic Orchestrator (`GigShieldOrchestrator`)
+### 1. Classic Orchestrator (`GICOrchestrator`)
 **File:** `src/pipeline/orchestrator.py`  
 **API:** `POST /api/claims/process-classic`  
 **Requires:** No LLM — works out of the box
@@ -320,7 +320,7 @@ Layer 1: Monitor (MCP signals) → Layer 2: Validation (threshold checks)
 → Layer 5: Decision → Deterministic eligibility + payout
 ```
 
-### 2. LangChain Orchestrator (`GigShieldLangChainOrchestrator`)
+### 2. LangChain Orchestrator (`GICLangChainOrchestrator`)
 **File:** `src/agents/langchain_orchestrator.py`  
 **Requires:** `GROQ_API_KEY` for LLM chains (RAG QA, fraud reasoning, decision)
 
@@ -330,8 +330,8 @@ Adds **LangChain LCEL chains** on top of the classic flow:
 - **Decision Chain** — LLM synthesizes agent outputs into structured JSON verdict
 - All chains are optional; if LLM is unavailable, the classic agent logic still runs
 
-### 3. LangGraph Orchestrator (`GigShieldLangGraphOrchestrator`)
-**File:** `src/agents/gigshield_langgraph.py`  
+### 3. LangGraph Orchestrator (`GICLangGraphOrchestrator`)
+**File:** `src/agents/gic_langgraph.py`  
 **API:** `POST /api/evaluate_worker` · `POST /api/orchestrate`  
 **Requires:** `GROQ_API_KEY`
 
@@ -359,7 +359,7 @@ Each node is a **tool-calling agent** (via `create_tool_calling_agent` + `AgentE
 #### State Schema
 
 ```python
-class GigShieldGraphState(TypedDict):
+class GICGraphState(TypedDict):
     trace_id: str
     worker_row: Dict[str, Any]
     city: str
@@ -384,7 +384,7 @@ class GigShieldGraphState(TypedDict):
 
 ## 🔧 LangChain Tools
 
-All tools are defined in `src/agents/gigshield_tools.py` and bound to agents via `build_gigshield_toolkit()`.
+All tools are defined in `src/agents/gic_tools.py` and bound to agents via `build_gic_toolkit()`.
 
 | Tool | Description |
 |------|-------------|
@@ -392,7 +392,7 @@ All tools are defined in `src/agents/gigshield_tools.py` and bound to agents via
 | `retrieve_disruption_knowledge(query)` | RAG retrieval over disruption events & regional data |
 | `retrieve_policy_knowledge(query)` | RAG retrieval over insurance policies, thresholds, slab rules |
 | `retrieve_fraud_playbooks(query)` | RAG retrieval over fraud patterns (GPS spoofing, coordinated rings) |
-| `record_structured_observation(...)` | Persists agent observations to Supabase `gigshield_agent_events` |
+| `record_structured_observation(...)` | Persists agent observations to Supabase `gic_agent_events` |
 | `persist_underwriter_decision_stub(...)` | Logs decision intent for human approval workflows |
 
 ---
@@ -451,8 +451,8 @@ The MCP layer sits between external data sources and the MonitorAgent, aggregati
 
 | Client | When Used | Data Source |
 |--------|-----------|-------------|
-| `MockMCPClient` | Default (`GIGSHIELD_USE_MOCK_MCP=true`) | In-memory scenario simulation (heavy_rain, cyclone, heat, strike, clear) |
-| `HttpMockApiMCPClient` | When `GIGSHIELD_MOCK_API_BASE` is set | Calls the FastAPI mock endpoints (`/api/weather`, `/api/news`, `/api/telecom`, `/api/platform`) via HTTP |
+| `MockMCPClient` | Default (`GIC_USE_MOCK_MCP=true`) | In-memory scenario simulation (heavy_rain, cyclone, heat, strike, clear) |
+| `HttpMockApiMCPClient` | When `GIC_MOCK_API_BASE` is set | Calls the FastAPI mock endpoints (`/api/weather`, `/api/news`, `/api/telecom`, `/api/platform`) via HTTP |
 
 ### Mock Scenarios
 
@@ -498,8 +498,8 @@ In addition to the trained ML models, two rule-based models handle the final eli
 
 | Target | When | Tables |
 |--------|------|--------|
-| **Supabase** (primary) | `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` set | `gigshield_decisions`, `gigshield_rag_queries`, `gigshield_agent_events`, `gigshield_workers` |
-| **SQLite** (fallback) | Supabase not configured | `data/gigshield_agents.db` → `agent_decisions`, `rag_queries` |
+| **Supabase** (primary) | `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` set | `gic_decisions`, `gic_rag_queries`, `gic_agent_events`, `gic_workers` |
+| **SQLite** (fallback) | Supabase not configured | `data/gic_agents.db` → `agent_decisions`, `rag_queries` |
 | **JSONL** (audit) | Always | `logs/agent_decisions.jsonl` |
 
 Every decision is written to **all available** stores for auditability.
@@ -522,8 +522,8 @@ GIG_INSURANCE_COMPANY/
 │   │
 │   ├── agents/               # 🤖 Multi-Agent System
 │   │   ├── core_agents.py    # 8 agent classes (Monitor→SQL) + AgentMessage protocol
-│   │   ├── gigshield_langgraph.py  # LangGraph StateGraph orchestrator (8-node DAG)
-│   │   ├── gigshield_tools.py      # LangChain @tool definitions (RAG, weather, persist)
+│   │   ├── gic_langgraph.py  # LangGraph StateGraph orchestrator (8-node DAG)
+│   │   ├── gic_tools.py      # LangChain @tool definitions (RAG, weather, persist)
 │   │   ├── langchain_orchestrator.py  # LangChain LCEL orchestrator (RAG chains + agents)
 │   │   └── sql_store.py      # SQLite persistence backend
 │   │
@@ -707,7 +707,7 @@ curl -X POST http://localhost:8000/api/inference/predict \
 
 ### Pinecone dimension mismatch
 - Set `PINECONE_INDEX_NAME` to your **exact** index name from the Pinecone console
-- Or explicitly set `PINECONE_INDEX_DIMENSION=1024` and `GIGSHIELD_EMBEDDING_MODEL=intfloat/e5-large-v2`
+- Or explicitly set `PINECONE_INDEX_DIMENSION=1024` and `GIC_EMBEDDING_MODEL=intfloat/e5-large-v2`
 - Switch to ChromaDB by setting `VECTOR_STORE_PROVIDER=chromadb` (no Pinecone needed)
 
 ### Frontend shows "Simulation Error"
@@ -737,5 +737,5 @@ uvicorn app:app --host 0.0.0.0 --port 8000
 - The **LangGraph endpoint** (`/api/evaluate_worker`) requires a valid `GROQ_API_KEY`. The classic orchestrator works without it.
 - **Supabase** is only needed for the Register/Onboarding flow. The 3 demo accounts (Z001-Z003) work without it.
 - The **LLM** is `llama-3.3-70b-versatile` via Groq by default. Configurable in `config/agent_config.py` → `LANGCHAIN_CONFIG`.
-- **Mock MCP** is enabled by default. Set `GIGSHIELD_USE_MOCK_MCP=false` to disable and use only worker-row signals.
+- **Mock MCP** is enabled by default. Set `GIC_USE_MOCK_MCP=false` to disable and use only worker-row signals.
 - All agent decisions are audited in `logs/agent_decisions.jsonl` regardless of Supabase configuration.

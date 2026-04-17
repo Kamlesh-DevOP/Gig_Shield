@@ -218,13 +218,13 @@ try:
 except Exception as e:
     check("API schemas", False, str(e))
 
-# ── gigshield_tools.py MCP wiring ───────────────────────────
-print("\n[Tools] gigshield_tools.py MCP Wiring")
+# ── gic_tools.py MCP wiring ───────────────────────────
+print("\n[Tools] gic_tools.py MCP Wiring")
 try:
-    from src.agents.gigshield_tools import build_gigshield_toolkit
+    from src.agents.gic_tools import build_gic_toolkit
     from src.rag.rag_system import RAGRetriever, VectorStore
     rag = RAGRetriever(VectorStore(provider="chromadb"))
-    toolkit = build_gigshield_toolkit(rag, {"trace_id": "test"})
+    toolkit = build_gic_toolkit(rag, {"trace_id": "test"})
     tool_names = {role: [t.name for t in tools] for role, tools in toolkit.items()}
     check("monitor has fetch_live_disruption_signals", "fetch_live_disruption_signals" in tool_names["monitor"])
     check("monitor has crawl_for_hazards (was missing)", "crawl_for_hazards" in tool_names["monitor"])
@@ -234,7 +234,7 @@ try:
     for role, names in tool_names.items():
         print(f"  {INFO}  {role:12s}: {', '.join(names)}")
 except Exception as e:
-    check("gigshield_tools wiring", False, str(e))
+    check("gic_tools wiring", False, str(e))
 
 # ── Summary ──────────────────────────────────────────────────
 total = len(results)

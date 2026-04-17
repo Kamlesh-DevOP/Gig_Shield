@@ -1,1 +1,1 @@
-"""Utilities for GigShield ML pipeline."""
+"""Utilities for GIC ML pipeline."""

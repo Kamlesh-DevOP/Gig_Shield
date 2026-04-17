@@ -3,7 +3,7 @@
 
 create extension if not exists "pgcrypto";
 
-create table if not exists public.gigshield_decisions (
+create table if not exists public.gic_decisions (
     id uuid primary key default gen_random_uuid(),
     trace_id text not null unique,
     worker_id bigint,
@@ -14,10 +14,10 @@ create table if not exists public.gigshield_decisions (
     created_at timestamptz not null default now()
 );
 
-create index if not exists idx_gigshield_decisions_worker on public.gigshield_decisions (worker_id);
-create index if not exists idx_gigshield_decisions_created on public.gigshield_decisions (created_at desc);
+create index if not exists idx_gic_decisions_worker on public.gic_decisions (worker_id);
+create index if not exists idx_gic_decisions_created on public.gic_decisions (created_at desc);
 
-create table if not exists public.gigshield_rag_queries (
+create table if not exists public.gic_rag_queries (
     id bigserial primary key,
     trace_id text,
     query_type text,
@@ -25,9 +25,9 @@ create table if not exists public.gigshield_rag_queries (
     created_at timestamptz not null default now()
 );
 
-create index if not exists idx_gigshield_rag_trace on public.gigshield_rag_queries (trace_id);
+create index if not exists idx_gic_rag_trace on public.gic_rag_queries (trace_id);
 
-create table if not exists public.gigshield_agent_events (
+create table if not exists public.gic_agent_events (
     id bigserial primary key,
     trace_id text not null,
     agent_name text not null,
@@ -36,11 +36,11 @@ create table if not exists public.gigshield_agent_events (
     created_at timestamptz not null default now()
 );
 
-create index if not exists idx_gigshield_events_trace on public.gigshield_agent_events (trace_id);
+create index if not exists idx_gic_events_trace on public.gic_agent_events (trace_id);
 
-alter table public.gigshield_decisions enable row level security;
-alter table public.gigshield_rag_queries enable row level security;
-alter table public.gigshield_agent_events enable row level security;
+alter table public.gic_decisions enable row level security;
+alter table public.gic_rag_queries enable row level security;
+alter table public.gic_agent_events enable row level security;
 
 -- Service role bypasses RLS; for anon/authenticated clients add policies as needed.
 -- Example (optional): allow service role only — typically you use service_role key from backend only.

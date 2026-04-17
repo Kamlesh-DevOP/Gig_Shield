@@ -1,4 +1,4 @@
-# GigShield MCP Layer — dependencies
+# GIC MCP Layer — dependencies
 # Install with: pip install -r mcp-layer/requirements.txt
 
 fastapi>=0.115.0

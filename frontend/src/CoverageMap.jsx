@@ -50,7 +50,7 @@ export default function CoverageMapTab({ partnerId, partnerData }) {
         try {
             setRefreshing(true);
             const { data: workers, error: wErr } = await supabase
-                .from('gigshield_workers')
+                .from('gic_workers')
                 .select('record');
 
             if (wErr) throw wErr;
@@ -85,7 +85,7 @@ export default function CoverageMapTab({ partnerId, partnerData }) {
             setCityData(cities);
 
             const { data: claims, error: cErr } = await supabase
-                .from('gigshield_decisions')
+                .from('gic_decisions')
                 .select('*')
                 .order('created_at', { ascending: false })
                 .limit(50);

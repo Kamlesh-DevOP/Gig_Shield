@@ -1,5 +1,5 @@
 """
-GigShield LangChain + RAG orchestrator: all required agents wired per product architecture.
+GIC LangChain + RAG orchestrator: all required agents wired per product architecture.
 
 Flow: Monitor → Validation (+RAG) → Context (RAG+optional LLM) → parallel
 (Fraud+RAG?, Risk, Rules) → Decision (optional LLM JSON) → Supabase (SQLite if env unset).
@@ -67,7 +67,7 @@ class LangChainWorkflowResult:
     timestamp: Optional[datetime] = None
 
 
-class GigShieldLangChainOrchestrator:
+class GICLangChainOrchestrator:
     """
     Full pipeline with LangChain RAG chains when GROQ_API_KEY (or configured provider) is set.
     Without LLM: same agent flow, RAG retrieval still runs for validation/context (text only).

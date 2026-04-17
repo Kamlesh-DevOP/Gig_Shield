@@ -3,7 +3,7 @@ import os
 
 import requests
 
-BASE = os.environ.get("GIGSHIELD_MOCK_API_BASE", "http://127.0.0.1:8000").rstrip("/")
+BASE = os.environ.get("GIC_MOCK_API_BASE", "http://127.0.0.1:8000").rstrip("/")
 
 def test(endpoint):
     print(f"\nTesting {endpoint}")

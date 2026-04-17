@@ -1,1 +1,1 @@
-# GigShield ML models package
+# GIC ML models package

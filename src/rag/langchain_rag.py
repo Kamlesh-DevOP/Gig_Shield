@@ -50,7 +50,7 @@ def build_rag_qa_chain(llm, rag: RAGRetriever, categories: Optional[List[str]] =
         [
             (
                 "system",
-                "You are a GigShield parametric insurance analyst. Answer ONLY using the context. "
+                "You are a GIC parametric insurance analyst. Answer ONLY using the context. "
                 "If context is insufficient, state what is missing. Be concise.",
             ),
             ("human", "Context:\n{context}\n\nQuestion: {question}"),
@@ -74,7 +74,7 @@ def build_fraud_reasoning_chain(llm, rag: RAGRetriever):
         [
             (
                 "system",
-                "You augment GigShield fraud detection with patterns from context. "
+                "You augment GIC fraud detection with patterns from context. "
                 "Reply with compact JSON only: {\"rationale\": str, \"escalate_review\": bool}",
             ),
             ("human", "Context:\n{context}\n\nWorker data JSON:\n{worker_json}\n"),
@@ -98,7 +98,7 @@ def build_decision_chain(llm):
         [
             (
                 "system",
-                "GigShield orchestrator. Output JSON only with keys: "
+                "GIC orchestrator. Output JSON only with keys: "
                 "decision (auto_approve|auto_reject|manual_review), confidence (0-1), rationale (short string).",
             ),
             ("human", "Agent packet:\n{packet}\n"),

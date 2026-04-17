@@ -25,7 +25,7 @@ LANGCHAIN_CONFIG = {
 # Vector Store Configuration
 VECTOR_STORE_CONFIG = {
     'provider': 'pinecone',  # 'chromadb' or 'pinecone'
-    'collection_name': 'gigshield_knowledge',
+    'collection_name': 'gic_knowledge',
     'embedding_model': 'sentence-transformers/all-MiniLM-L6-v2',
     'chunk_size': 500,
     'chunk_overlap': 50,
@@ -41,8 +41,8 @@ VECTOR_STORE_CONFIG = {
     'pinecone': {
         # Env: PINECONE_API_KEY, PINECONE_HOST (serverless)
         # PINECONE_INDEX_NAME: must match the index name in the Pinecone console so describe_index can read dimension
-        #   (defaults to gigshield-index if unset — wrong name => fallback to MiniLM 384 and dimension errors).
-        # Or set PINECONE_INDEX_DIMENSION=1024 / GIGSHIELD_EMBEDDING_MODEL=intfloat/e5-large-v2 explicitly.
+        #   (defaults to gic-index if unset — wrong name => fallback to MiniLM 384 and dimension errors).
+        # Or set PINECONE_INDEX_DIMENSION=1024 / GIC_EMBEDDING_MODEL=intfloat/e5-large-v2 explicitly.
         'index_name': 'devtrails',
         'dimension': 384,
         'pinecone_index_dimension': 1024
@@ -212,7 +212,7 @@ SQL_AGENT_CONFIG = {
         'type': 'postgresql',  # or 'sqlite'
         'host': 'localhost',
         'port': 5432,
-        'database': 'gigshield',
+        'database': 'gic',
         'schema': 'insurance'
     },
     'operations': {

@@ -3,7 +3,7 @@
 
 services:
   - type: web
-    name: gigshield-api
+    name: gic-api
     runtime: docker
     repo: https://github.com/YOUR_GITHUB_USERNAME/GIG_INSURANCE_COMPANY  # ← Update this
     plan: free                    # or starter / standard for production
@@ -36,11 +36,11 @@ services:
         sync: false
 
       # --- App tuning ---
-      - key: GIGSHIELD_MODEL_DIR
+      - key: GIC_MODEL_DIR
         value: models
-      - key: GIGSHIELD_CORS_ORIGINS
+      - key: GIC_CORS_ORIGINS
         value: "*"
-      - key: GIGSHIELD_MOUNT_PARTNER_MOCK
+      - key: GIC_MOUNT_PARTNER_MOCK
         value: "true"
       - key: VECTOR_STORE_PROVIDER
         value: chromadb

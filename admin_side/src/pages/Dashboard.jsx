@@ -97,7 +97,7 @@ const Dashboard = () => {
 
         // 1. Fetch current status from Supabase (Historical/Current)
         const { data: workers, error: workerErr } = await supabase
-          .from('gigshield_workers')
+          .from('gic_workers')
           .select('record, ingested_at');
 
         if (workerErr) throw workerErr;

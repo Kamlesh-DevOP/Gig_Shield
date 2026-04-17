@@ -107,7 +107,7 @@ def _open_meteo_weather(city: str) -> str:
 # Tool factory
 # ─────────────────────────────────────────────────────────────
 
-def build_gigshield_toolkit(
+def build_gic_toolkit(
     rag: RAGRetriever,
     trace_id_holder: Dict[str, str],
 ) -> Dict[str, List[StructuredTool]]:
@@ -215,7 +215,7 @@ def build_gigshield_toolkit(
     # ── RAG: Disruption knowledge ────────────────────────────
     @tool
     def retrieve_disruption_knowledge(query: str) -> str:
-        """Retrieve GigShield parametric disruption rules and historical disruption context from the vector store."""
+        """Retrieve GIC parametric disruption rules and historical disruption context from the vector store."""
         ctx = rag.retrieve_context(query, categories=["disruption_events", "regional_data"])
         return ctx.get("context_text") or ""
 
@@ -240,7 +240,7 @@ def build_gigshield_toolkit(
         event_type: str,
         observation_json: str,
     ) -> str:
-        """Persist a structured agent observation to Supabase gigshield_agent_events (no secrets in payload)."""
+        """Persist a structured agent observation to Supabase gic_agent_events (no secrets in payload)."""
         tid = trace_id_holder.get("trace_id", "")
         if not tid:
             return "skipped: no trace_id"

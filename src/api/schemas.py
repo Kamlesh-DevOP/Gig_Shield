@@ -1,4 +1,4 @@
-"""Request/response models for the GigShield HTTP API (module-level for OpenAPI)."""
+"""Request/response models for the GIC HTTP API (module-level for OpenAPI)."""
 
 from __future__ import annotations
 

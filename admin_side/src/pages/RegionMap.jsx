@@ -65,7 +65,7 @@ const RegionMap = () => {
       try {
         setLoading(true);
         const { data: workers, error } = await supabase
-          .from('gigshield_workers')
+          .from('gic_workers')
           .select('worker_id, record');
         
         if (error) throw error;

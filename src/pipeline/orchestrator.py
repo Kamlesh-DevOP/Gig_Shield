@@ -49,7 +49,7 @@ class WorkflowResult:
     extras: Optional[Dict[str, Any]] = None
 
 
-class GigShieldOrchestrator:
+class GICOrchestrator:
     def __init__(
         self,
         inference_pipeline: Optional[InferencePipeline] = None,

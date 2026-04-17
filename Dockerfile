@@ -1,4 +1,4 @@
-# ── GigShield Backend — Production Dockerfile ────────────────────────
+# ── GIC Backend — Production Dockerfile ────────────────────────
 # Optimised for Render (free-tier 512 MB RAM) by splitting heavy
 # deps into a cached layer and using --no-cache-dir throughout.
 # ─────────────────────────────────────────────────────────────────────

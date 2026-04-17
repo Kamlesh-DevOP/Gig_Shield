@@ -1,5 +1,5 @@
 """
-GigShield Payout Service — RazorpayX Payouts Integration.
+GIC Payout Service — RazorpayX Payouts Integration.
 
 Handles automatic disbursement of insurance claim payouts to workers
 via their registered UPI VPA or bank account.
@@ -242,7 +242,7 @@ async def process_claim_payout(
     worker_data = None
     if sb:
         try:
-            res = sb.table("gigshield_workers").select(
+            res = sb.table("gic_workers").select(
                 "worker_id, payout_method, upi_id, bank_name, account_number, "
                 "ifsc_code, account_holder, razorpay_contact_id, razorpay_fund_account_id, record"
             ).eq("worker_id", worker_id).single().execute()
@@ -277,7 +277,7 @@ async def process_claim_payout(
         # Cache contact_id in DB
         if sb and not demo:
             try:
-                sb.table("gigshield_workers").update(
+                sb.table("gic_workers").update(
                     {"razorpay_contact_id": contact_id}
                 ).eq("worker_id", worker_id).execute()
             except Exception as e:
@@ -301,7 +301,7 @@ async def process_claim_payout(
         # Cache fund_account_id in DB
         if sb and not demo:
             try:
-                sb.table("gigshield_workers").update(
+                sb.table("gic_workers").update(
                     {"razorpay_fund_account_id": fund_account_id}
                 ).eq("worker_id", worker_id).execute()
             except Exception as e:
@@ -404,7 +404,7 @@ async def reset_payout(
 
                 # Clear cached Razorpay IDs
                 try:
-                    sb.table("gigshield_workers").update({
+                    sb.table("gic_workers").update({
                         "razorpay_contact_id": None,
                         "razorpay_fund_account_id": None,
                     }).eq("worker_id", worker_id).execute()

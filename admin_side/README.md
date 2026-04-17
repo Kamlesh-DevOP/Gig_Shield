@@ -1,6 +1,6 @@
-# 🛡️ GigShield Admin Dashboard
+# 🛡️ GIC Admin Dashboard
 
-The **GigShield Admin Dashboard** is a high-fidelity, predictive command center designed for insurance administrators to manage risk, oversee financial health, and simulate real-world disruptions across the gig economy.
+The **GIC Admin Dashboard** is a high-fidelity, predictive command center designed for insurance administrators to manage risk, oversee financial health, and simulate real-world disruptions across the gig economy.
 
 ## 🚀 Key Features
 

@@ -1,8 +1,8 @@
 """
-CLI: load CSV into Supabase (gigshield_workers) and upsert RAG vectors to Pinecone.
+CLI: load CSV into Supabase (gic_workers) and upsert RAG vectors to Pinecone.
 
 Prerequisites
-  - Supabase: run supabase/migrations/001_gigshield.sql and 002_gigshield_workers.sql
+  - Supabase: run supabase/migrations/001_gic.sql and 002_gic_workers.sql
   - .env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
   - Pinecone: VECTOR_STORE_PROVIDER=pinecone, PINECONE_API_KEY, PINECONE_HOST
   - If your index is 1024-d: PINECONE_INDEX_DIMENSION=1024 in .env

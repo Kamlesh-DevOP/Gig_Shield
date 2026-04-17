@@ -257,5 +257,5 @@ SHAP_CONFIG = {
 # MLflow Configuration
 MLFLOW_CONFIG = {
     'tracking_uri': 'mlruns',
-    'experiment_name': 'gigshield_insurance'
+    'experiment_name': 'gic_insurance'
 }

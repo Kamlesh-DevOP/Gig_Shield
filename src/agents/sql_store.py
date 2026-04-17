@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional
 
 
 def _db_path() -> Path:
-    p = Path("data/gigshield_agents.db")
+    p = Path("data/gic_agents.db")
     p.parent.mkdir(parents=True, exist_ok=True)
     return p
 

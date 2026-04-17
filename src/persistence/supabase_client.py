@@ -1,5 +1,5 @@
 """
-Supabase client initialization and typed writes for GigShield workflow.
+Supabase client initialization and typed writes for GIC workflow.
 Requires: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in environment.
 """
 
@@ -106,7 +106,7 @@ def insert_decision_any(
     payout_amount: float,
     payload: Optional[Dict[str, Any]] = None,
 ) -> None:
-    """Write to Supabase when configured; otherwise SQLite (`data/gigshield_agents.db`)."""
+    """Write to Supabase when configured; otherwise SQLite (`data/gic_agents.db`)."""
     if is_configured():
         insert_decision(trace_id, worker_id, decision, confidence, payout_amount, payload)
         return
@@ -134,8 +134,8 @@ def _dedupe_worker_batch(chunk: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def bulk_upsert_workers(rows: List[Dict[str, Any]], batch_size: int = 250) -> int:
     """
-    Upsert worker snapshots into gigshield_workers. Each row: {"worker_id": int, "record": dict}.
-    Requires migration 002 (supabase/migrations/002_gigshield_workers.sql) applied in the Supabase SQL Editor.
+    Upsert worker snapshots into gic_workers. Each row: {"worker_id": int, "record": dict}.
+    Requires migration 002 (supabase/migrations/002_gic_workers.sql) applied in the Supabase SQL Editor.
     """
     if not rows:
         return 0
@@ -149,10 +149,10 @@ def bulk_upsert_workers(rows: List[Dict[str, Any]], batch_size: int = 250) -> in
         except Exception as e:
             err = getattr(e, "args", None)
             msg = str(err[0]) if err else str(e)
-            if "PGRST205" in msg or "gigshield_workers" in msg.lower():
+            if "PGRST205" in msg or "gic_workers" in msg.lower():
                 raise RuntimeError(
                     f"Table public.{TABLE_WORKERS} is missing. In Supabase → SQL Editor, run the file "
-                    f"supabase/migrations/002_gigshield_workers.sql (and 001 if you have not). "
+                    f"supabase/migrations/002_gic_workers.sql (and 001 if you have not). "
                     f"Then retry. Original error: {e}"
                 ) from e
             if "21000" in msg or "second time" in msg.lower():

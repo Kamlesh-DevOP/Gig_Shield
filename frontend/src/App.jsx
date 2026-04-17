@@ -335,15 +335,15 @@ function LoginPage({ onLogin }) {
       return;
     }
 
-    // 2. Fetch the associated gigshield record (optional/fallback-safe)
-    console.log("Step 2: Fetching metrics from gigshield_workers for ID:", cleanId);
+    // 2. Fetch the associated gic record (optional/fallback-safe)
+    console.log("Step 2: Fetching metrics from gic_workers for ID:", cleanId);
     const { data: gsRecord, error: gsErr } = await supabase
-      .from('gigshield_workers')
+      .from('gic_workers')
       .select('record, payout_method, upi_id, bank_name, account_number, ifsc_code, account_holder')
       .eq('worker_id', cleanId)
       .single();
 
-    if (gsErr) console.warn("Could not find gigshield_workers record:", gsErr.message);
+    if (gsErr) console.warn("Could not find gic_workers record:", gsErr.message);
 
     setLoading(false);
 

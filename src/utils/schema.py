@@ -68,7 +68,7 @@ DEFAULT_STRING_FILLS = {
 }
 
 
-def normalize_gigshield_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+def normalize_gic_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """
     Align uploaded CSV quirks with model expectations:
     - Many rows have NaN disruption_type (no event): fill with 'Heavy_Rain'
@@ -87,7 +87,7 @@ def normalize_gigshield_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
 def ensure_worker_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Add missing optional columns so all models receive stable inputs."""
-    out = normalize_gigshield_dataframe(df)
+    out = normalize_gic_dataframe(df)
     for col, default in DEFAULT_NUMERIC_FILLS.items():
         if col not in out.columns:
             if col == "forecasted_weekly_income" and "avg_52week_income" in out.columns:

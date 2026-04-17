@@ -438,7 +438,7 @@ class SQLAgent(BaseAgent):
             f.write(json.dumps({"trace_id": trace_id, **payload}, default=str) + "\n")
         return self.create_message(
             "sql_recorded",
-            {"path": path, "sqlite_fallback": "data/gigshield_agents.db", "supabase": "when SUPABASE_* set"},
+            {"path": path, "sqlite_fallback": "data/gic_agents.db", "supabase": "when SUPABASE_* set"},
             trace_id,
             priority="low",
         )

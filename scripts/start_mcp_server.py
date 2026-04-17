@@ -1,5 +1,5 @@
 """
-Convenience launcher for the GigShield MCP Layer server.
+Convenience launcher for the GIC MCP Layer server.
 
 Usage:
   python scripts/start_mcp_server.py

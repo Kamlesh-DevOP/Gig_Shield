@@ -17,7 +17,7 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 sys.path.append('.')
 
 from src.pipeline.training_pipeline import MLTrainingPipeline, InferencePipeline
-from src.pipeline.orchestrator import GigShieldOrchestrator
+from src.pipeline.orchestrator import GICOrchestrator
 from src.rag.rag_system import populate_knowledge_base, VectorStore
 import pandas as pd
 
@@ -93,7 +93,7 @@ async def run_autonomous_system(worker_data_path: str, model_dir: str = "models"
         "premium_prediction": f"{model_dir}/premium_prediction",
     }
     inference = InferencePipeline(model_paths)
-    orchestrator = GigShieldOrchestrator(inference_pipeline=inference, vector_store=vector_store)
+    orchestrator = GICOrchestrator(inference_pipeline=inference, vector_store=vector_store)
     
     # Process claims
     sample_workers = worker_df.head(3)
@@ -114,7 +114,7 @@ async def run_autonomous_system(worker_data_path: str, model_dir: str = "models"
 
 async def run_autonomous_langchain_system(worker_data_path: str, model_dir: str = "models"):
     """Run RAG + LangChain orchestrator (requires GROQ_API_KEY for LLM chains; RAG still works)."""
-    from src.agents.langchain_orchestrator import GigShieldLangChainOrchestrator
+    from src.agents.langchain_orchestrator import GICLangChainOrchestrator
 
     print("\n🚀 GIC LangChain + RAG pipeline...")
     from src.utils.schema import ensure_worker_columns
@@ -129,7 +129,7 @@ async def run_autonomous_langchain_system(worker_data_path: str, model_dir: str 
         "premium_prediction": f"{model_dir}/premium_prediction",
     }
     inference = InferencePipeline(model_paths)
-    orch = GigShieldLangChainOrchestrator(inference_pipeline=inference, ensure_kb=True)
+    orch = GICLangChainOrchestrator(inference_pipeline=inference, ensure_kb=True)
 
     sample = worker_df.head(2)
     results = []
@@ -161,7 +161,7 @@ async def run_autonomous_langchain_system(worker_data_path: str, model_dir: str 
 
 async def run_autonomous_langgraph_system(worker_data_path: str, model_dir: str = "models"):
     """LangGraph + tool-calling agents + RAG tools + Supabase/SQLite persistence (requires GROQ_API_KEY)."""
-    from src.agents.gigshield_langgraph import GigShieldLangGraphOrchestrator
+    from src.agents.gic_langgraph import GICLangGraphOrchestrator
     from src.utils.schema import ensure_worker_columns
 
     print("\n🚀 GIC LangGraph multi-agent (tool-calling) pipeline...")
@@ -175,7 +175,7 @@ async def run_autonomous_langgraph_system(worker_data_path: str, model_dir: str 
         "premium_prediction": f"{model_dir}/premium_prediction",
     }
     inference = InferencePipeline(model_paths)
-    orch = GigShieldLangGraphOrchestrator(inference_pipeline=inference, ensure_kb=True)
+    orch = GICLangGraphOrchestrator(inference_pipeline=inference, ensure_kb=True)
 
     sample = worker_df.head(1)
     results = []

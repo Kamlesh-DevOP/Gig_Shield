@@ -1,5 +1,5 @@
 """
-GigShield MCP Server — Real-Time Tracking Layer.
+GIC MCP Server — Real-Time Tracking Layer.
 
 Exposes four tools via the Model Context Protocol (FastMCP):
   1. get_weather            — live weather from OpenWeatherMap
@@ -39,7 +39,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [MCP] %(levelname)s 
 logger = logging.getLogger("mcp_server")
 
 mcp = FastMCP(
-    "GigShield Real-Time Tracking",
+    "GIC Real-Time Tracking",
     description="Weather, News, and Web-Crawling tools for gig-worker insurance risk assessment.",
 )
 
@@ -66,7 +66,7 @@ DISRUPTION_NEWS_KEYWORDS = [
     "shutdown", "blocked", "suspended",
 ]
 
-# City coordinates for OpenWeatherMap (Indian cities commonly used in GigShield)
+# City coordinates for OpenWeatherMap (Indian cities commonly used in GIC)
 CITY_COORDS: Dict[str, Dict[str, float]] = {
     "chennai": {"lat": 13.0827, "lon": 80.2707},
     "mumbai": {"lat": 19.0760, "lon": 72.8777},
@@ -581,7 +581,7 @@ def analyze_localized_risk(location: str, sector: str) -> str:
         "hazard_context": "\n".join(hazard_summaries) if hazard_summaries else "No specific hazards detected.",
         "formula": f"P_final = P_base x {r_weather} (weather) x {r_market} (market) = P_base x {final_multiplier}",
         "analyzed_at": datetime.now(timezone.utc).isoformat(),
-        "source": "GigShield_MCP_Server",
+        "source": "GIC_MCP_Server",
     }
     logger.info(
         "Risk analysis %s/%s: overall=%s, multiplier=%.3f",

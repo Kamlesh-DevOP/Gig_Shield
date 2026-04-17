@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI
 
-app = FastAPI(title="GigShield Realistic Multi-City Mock APIs")
+app = FastAPI(title="GIC Realistic Multi-City Mock APIs")
 
 # -------------------------------
 # CONFIG

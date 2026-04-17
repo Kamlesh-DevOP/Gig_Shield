@@ -1,5 +1,5 @@
 """
-GigShield FastAPI application.
+GIC FastAPI application.
 
 Run from repository root:
   uvicorn app:app --host 0.0.0.0 --port 8000
@@ -133,74 +133,74 @@ def _workflow_to_dict(r: Any) -> Dict[str, Any]:
 def load_models_sync():
     global inference_pipeline, vector_store, classic_orchestrator, langgraph_orchestrator
 
-    model_dir = os.getenv("GIGSHIELD_MODEL_DIR", "models")
+    model_dir = os.getenv("GIC_MODEL_DIR", "models")
     paths = _model_paths(model_dir)
 
-    print("\n[GigShield API] Background task starting — loading models and orchestrators...")
+    print("\n[GIC API] Background task starting — loading models and orchestrators...")
 
     try:
         from src.pipeline.training_pipeline import InferencePipeline
 
         inference_pipeline = InferencePipeline(paths)
-        print("[GigShield API] InferencePipeline loaded.")
+        print("[GIC API] InferencePipeline loaded.")
     except Exception as e:
         logger.warning("InferencePipeline not loaded: %s", e)
-        print(f"[GigShield API] Warning: InferencePipeline unavailable: {e}")
+        print(f"[GIC API] Warning: InferencePipeline unavailable: {e}")
 
     try:
         from src.rag.rag_system import VectorStore, populate_knowledge_base
 
         vector_store = VectorStore()
         populate_knowledge_base(vector_store)
-        print("[GigShield API] Vector store + knowledge bundle ready.")
+        print("[GIC API] Vector store + knowledge bundle ready.")
     except Exception as e:
         logger.warning("Vector store / KB: %s", e)
-        print(f"[GigShield API] Warning: RAG vector store limited or offline: {e}")
+        print(f"[GIC API] Warning: RAG vector store limited or offline: {e}")
 
     try:
-        from src.pipeline.orchestrator import GigShieldOrchestrator
+        from src.pipeline.orchestrator import GICOrchestrator
 
-        classic_orchestrator = GigShieldOrchestrator(
+        classic_orchestrator = GICOrchestrator(
             inference_pipeline=inference_pipeline,
             vector_store=vector_store,
         )
-        print("[GigShield API] Classic GigShieldOrchestrator ready (no Groq/LLM required).")
+        print("[GIC API] Classic GICOrchestrator ready (no Groq/LLM required).")
     except Exception as e:
         logger.warning("Classic orchestrator: %s", e)
-        print(f"[GigShield API] Warning: classic orchestrator failed: {e}")
+        print(f"[GIC API] Warning: classic orchestrator failed: {e}")
 
     try:
-        from src.agents.gigshield_langgraph import GigShieldLangGraphOrchestrator
+        from src.agents.gic_langgraph import GICLangGraphOrchestrator
 
         lang_ensure_kb = vector_store is None
-        langgraph_orchestrator = GigShieldLangGraphOrchestrator(
+        langgraph_orchestrator = GICLangGraphOrchestrator(
             inference_pipeline=inference_pipeline,
             vector_store=vector_store,
             ensure_kb=lang_ensure_kb,
         )
-        print("[GigShield API] LangGraph orchestrator ready.")
+        print("[GIC API] LangGraph orchestrator ready.")
     except Exception as e:
         logger.warning("LangGraph orchestrator: %s", e)
-        print(f"[GigShield API] Warning: LangGraph offline (check GROQ_API_KEY): {e}")
+        print(f"[GIC API] Warning: LangGraph offline (check GROQ_API_KEY): {e}")
 
-    print("[GigShield API] Background loading complete.")
+    print("[GIC API] Background loading complete.")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     import asyncio
     
-    print("\n[GigShield API] Starting FastAPI server. Models are loading in the background...")
+    print("\n[GIC API] Starting FastAPI server. Models are loading in the background...")
     loop = asyncio.get_event_loop()
     loop.run_in_executor(None, load_models_sync)
     yield
 
-    print("[GigShield API] Shutdown.")
+    print("[GIC API] Shutdown.")
 
 
 def create_app() -> FastAPI:
     application = FastAPI(
-        title="GigShield API",
+        title="GIC API",
         description="ML inference, RAG, classic multi-agent pipeline, and LangGraph tool agents.",
         version="1.1.0",
         lifespan=lifespan,
@@ -208,7 +208,7 @@ def create_app() -> FastAPI:
 
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=os.getenv("GIGSHIELD_CORS_ORIGINS", "*").split(","),
+        allow_origins=os.getenv("GIC_CORS_ORIGINS", "*").split(","),
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -220,7 +220,7 @@ def create_app() -> FastAPI:
     )
 
     # Optional: mount local partner mock under /partner-mock
-    if os.getenv("GIGSHIELD_MOUNT_PARTNER_MOCK", "true").strip().lower() in ("1", "true", "yes", "on"):
+    if os.getenv("GIC_MOUNT_PARTNER_MOCK", "true").strip().lower() in ("1", "true", "yes", "on"):
         try:
             from mock_api.mock_api import app as partner_mock_app
 
@@ -232,7 +232,7 @@ def create_app() -> FastAPI:
     @application.get("/", tags=["System"])
     def root():
         return {
-            "service": "GigShield API",
+            "service": "GIC API",
             "docs": "/docs",
             "health": "/health",
             "endpoints": {
@@ -347,7 +347,7 @@ def create_app() -> FastAPI:
     @application.post("/api/inference/predict", tags=["ML"])
     def inference_predict(req: InferencePredictRequest):
         if not inference_pipeline:
-            raise HTTPException(status_code=503, detail="InferencePipeline not loaded (train models or fix GIGSHIELD_MODEL_DIR).")
+            raise HTTPException(status_code=503, detail="InferencePipeline not loaded (train models or fix GIC_MODEL_DIR).")
         try:
             df_input = pd.DataFrame([req.worker.model_dump()])
             raw = inference_pipeline.predict_for_worker(df_input)
@@ -831,7 +831,7 @@ def create_app() -> FastAPI:
     async def simulate_disruption(req: Dict[str, Any]):
         """
         Simulate a disruption for a specific city + area.
-        - Fetches all workers from gigshield_workers where city matches
+        - Fetches all workers from gic_workers where city matches
         - Filters by outlet_lat/lon proximity to known area center (Haversine)
         - Augments each worker record with disruption overrides
         - Runs classic orchestrator for each matched worker
@@ -1005,7 +1005,7 @@ def create_app() -> FastAPI:
             sb = create_client(supabase_url, supabase_key)
 
             # Fetch workers filtered by city (case-insensitive substring in record JSONB)
-            response = sb.table("gigshield_workers").select("record").execute()
+            response = sb.table("gic_workers").select("record").execute()
             all_workers_raw = response.data or []
         except HTTPException:
             raise
@@ -1221,7 +1221,7 @@ def create_app() -> FastAPI:
         try:
             from supabase import create_client as _create_sb
             _sb = _create_sb(supabase_url, supabase_key)
-            _resp = _sb.table("gigshield_workers").select("record").execute()
+            _resp = _sb.table("gic_workers").select("record").execute()
             all_workers_raw = _resp.data or []
             for _row in all_workers_raw:
                 _rec = _row.get("record", {})
@@ -1507,7 +1507,7 @@ def create_app() -> FastAPI:
         try:
             from supabase import create_client as _create_sb
             _sb = _create_sb(supabase_url, supabase_key)
-            _resp = _sb.table("gigshield_workers").select("record").execute()
+            _resp = _sb.table("gic_workers").select("record").execute()
             all_workers = _resp.data or []
         except Exception as e:
             logger.error("forecast_analyze: Supabase fetch failed: %s", e)

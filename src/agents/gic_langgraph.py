@@ -38,7 +38,7 @@ from src.agents.core_agents import (
     get_llm,
     run_parallel_agents,
 )
-from src.agents.gigshield_tools import build_gigshield_toolkit
+from src.agents.gic_tools import build_gic_toolkit
 from src.models.deterministic_models import ClaimEligibilityModel, PayoutOptimizationModel
 from src.pipeline.training_pipeline import InferencePipeline
 from src.rag.rag_system import RAGRetriever, VectorStore, populate_knowledge_base
@@ -121,7 +121,7 @@ def _agent_executor_factory(llm, system_prompt: str, tools: List[Any]):
         ) from e
 
 
-class GigShieldGraphState(TypedDict, total=False):
+class GICGraphState(TypedDict, total=False):
     trace_id: str
     worker_row: Dict[str, Any]
     city: str
@@ -145,14 +145,14 @@ class GigShieldGraphState(TypedDict, total=False):
 
 
 @dataclass
-class GigShieldGraphResult:
+class GICGraphResult:
     trace_id: str
     worker_id: int
     final_state: Dict[str, Any]
     processing_time_ms: float
 
 
-class GigShieldLangGraphOrchestrator:
+class GICLangGraphOrchestrator:
     """Compiles and runs the LangGraph; each node invokes a real tool-calling agent except ML/eligibility."""
 
     def __init__(
@@ -163,7 +163,7 @@ class GigShieldLangGraphOrchestrator:
     ):
         self.llm = get_llm()
         if self.llm is None:
-            raise RuntimeError("GigShieldLangGraphOrchestrator requires GROQ_API_KEY (or configured Chat LLM).")
+            raise RuntimeError("GICLangGraphOrchestrator requires GROQ_API_KEY (or configured Chat LLM).")
 
         self.inference_pipeline = inference_pipeline
         self.vector_store = vector_store or VectorStore()
@@ -185,7 +185,7 @@ class GigShieldLangGraphOrchestrator:
         self._elig = ClaimEligibilityModel()
         self._payout = PayoutOptimizationModel()
 
-        tools_map = build_gigshield_toolkit(self.rag, self.trace_holder)
+        tools_map = build_gic_toolkit(self.rag, self.trace_holder)
 
         self._ex_monitor = _agent_executor_factory(
             self.llm,
@@ -232,7 +232,7 @@ class GigShieldLangGraphOrchestrator:
         self._graph = self._compile_graph()
 
     def _compile_graph(self):
-        builder = StateGraph(GigShieldGraphState)
+        builder = StateGraph(GICGraphState)
 
         builder.add_node("monitor", self._node_monitor)
         builder.add_node("validation", self._node_validation)
@@ -255,7 +255,7 @@ class GigShieldLangGraphOrchestrator:
 
         return builder.compile()
 
-    async def _node_monitor(self, state: GigShieldGraphState) -> Dict[str, Any]:
+    async def _node_monitor(self, state: GICGraphState) -> Dict[str, Any]:
         self.trace_holder["trace_id"] = state["trace_id"]
         city = state.get("city") or "unknown"
         work_type = state.get("work_type") or str(state["worker_row"].get("employment_type", "delivery"))
@@ -286,12 +286,12 @@ class GigShieldLangGraphOrchestrator:
             "work_type": work_type,
         }
 
-    async def _node_validation(self, state: GigShieldGraphState) -> Dict[str, Any]:
+    async def _node_validation(self, state: GICGraphState) -> Dict[str, Any]:
         blob = state.get("monitor_report", "")
         out = await self._ex_validation.ainvoke({"input": f"Monitor report:\n{blob[:12000]}\nValidate with tools."})
         return {"validation_report": str(out.get("output", ""))}
 
-    async def _node_context(self, state: GigShieldGraphState) -> Dict[str, Any]:
+    async def _node_context(self, state: GICGraphState) -> Dict[str, Any]:
         row = state["worker_row"]
         q = state.get("context_question") or (
             f"Worker {row.get('worker_id')} city {state.get('city')} disruption {row.get('disruption_type')} "
@@ -306,7 +306,7 @@ class GigShieldLangGraphOrchestrator:
             pass
         return {"context_report": str(out.get("output", ""))}
 
-    async def _node_ml_core(self, state: GigShieldGraphState) -> Dict[str, Any]:
+    async def _node_ml_core(self, state: GICGraphState) -> Dict[str, Any]:
         row = state["worker_row"]
         bundle: Dict[str, Any] = {"parallel_agents": [], "ml_predictions": {}}
         parallel = await run_parallel_agents(row, state["trace_id"], self._fraud_agent, self._risk_agent, self._rule_agent)
@@ -322,7 +322,7 @@ class GigShieldLangGraphOrchestrator:
                 bundle["ml_predictions"] = {"error": str(e)}
         return {"ml_bundle": bundle}
 
-    async def _node_specialists(self, state: GigShieldGraphState) -> Dict[str, Any]:
+    async def _node_specialists(self, state: GICGraphState) -> Dict[str, Any]:
         mb = state.get("ml_bundle") or {}
         fraud_blob = json.dumps(mb, default=str)[:12000]
         tasks = [
@@ -344,7 +344,7 @@ class GigShieldLangGraphOrchestrator:
             "rules_specialist_report": str(rules_o.get("output", "")),
         }
 
-    async def _node_decision(self, state: GigShieldGraphState) -> Dict[str, Any]:
+    async def _node_decision(self, state: GICGraphState) -> Dict[str, Any]:
         mcp_risk = state.get("mcp_risk_profile") or {}
         mcp_summary = ""
         if mcp_risk and not mcp_risk.get("fallback"):
@@ -373,7 +373,7 @@ class GigShieldLangGraphOrchestrator:
         )
         return {"decision_agent_report": str(out.get("output", ""))}
 
-    async def _node_deterministic(self, state: GigShieldGraphState) -> Dict[str, Any]:
+    async def _node_deterministic(self, state: GICGraphState) -> Dict[str, Any]:
         row = ensure_worker_columns(pd.DataFrame([state["worker_row"]])).iloc[0].to_dict()
         mb = state.get("ml_bundle") or {}
         msgs: List[AgentMessage] = []
@@ -411,7 +411,7 @@ class GigShieldLangGraphOrchestrator:
             "payout_breakdown": payout_breakdown,
         }
 
-    async def _node_persist(self, state: GigShieldGraphState) -> Dict[str, Any]:
+    async def _node_persist(self, state: GICGraphState) -> Dict[str, Any]:
         row = state["worker_row"]
         wid = int(row.get("worker_id", 0))
         mcp_risk = state.get("mcp_risk_profile") or {}
@@ -453,14 +453,14 @@ class GigShieldLangGraphOrchestrator:
         city: Optional[str] = None,
         context_question: Optional[str] = None,
         work_type: Optional[str] = None,
-    ) -> GigShieldGraphResult:
+    ) -> GICGraphResult:
         start = datetime.now()
         worker_data = ensure_worker_columns(worker_data)
         row = worker_data.iloc[0].to_dict()
         trace_id = str(uuid.uuid4())
         self.trace_holder["trace_id"] = trace_id
 
-        init: GigShieldGraphState = {
+        init: GICGraphState = {
             "trace_id": trace_id,
             "worker_row": row,
             "city": city or str(row.get("city", "Mumbai")),
@@ -470,7 +470,7 @@ class GigShieldLangGraphOrchestrator:
         }
         final = await self._graph.ainvoke(init)
         ms = (datetime.now() - start).total_seconds() * 1000.0
-        return GigShieldGraphResult(
+        return GICGraphResult(
             trace_id=trace_id,
             worker_id=int(row.get("worker_id", 0)),
             final_state=dict(final),

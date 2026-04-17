@@ -81,7 +81,7 @@ A high-fidelity command and control center built leveraging `React Simple Maps` 
 Here is an elaborated flow of exactly what operates on the Python Fast API clusters during a catastrophic disruption:
 
 1. **Continuous Asynchronous Scanning:** The MCP Layer asynchronously polls regional endpoints (e.g. `mock_mcp_client.py`).
-2. **Threshold Rupture & Dispatch:** A massive rainfall variable passes exactly 15cm for Chennai. The `Monitor Agent` instantaneously registers the threshold rupture. It triggers the event state and queues a `GigShieldGraphState` package.
+2. **Threshold Rupture & Dispatch:** A massive rainfall variable passes exactly 15cm for Chennai. The `Monitor Agent` instantaneously registers the threshold rupture. It triggers the event state and queues a `GICGraphState` package.
 3. **Data Verification:** The `Validation Agent` executes immediately confirming that over 50 workers from the system nodes belong inherently to the affected radius, passing validation logic.
 4. **Vector Knowledge Appendment (RAG):** The `Context Agent` embeds queries retrieving localized parameter caps, slab maximums, and localized regional historical norms from `Pinecone`.
 5. **Parallel Macro AI Evaluation (Layer 4):**

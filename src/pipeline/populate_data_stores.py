@@ -67,7 +67,7 @@ def run_populate(
             wid = int(row["worker_id"])
             rows.append({"worker_id": wid, "record": series_to_record(row)})
         inserted = bulk_upsert_workers(rows)
-        print(f"Supabase gigshield_workers: upserted {inserted} rows")
+        print(f"Supabase gic_workers: upserted {inserted} rows")
 
     if do_pinecone_kb or do_worker_vectors:
         os.environ["VECTOR_STORE_PROVIDER"] = os.environ.get("VECTOR_STORE_PROVIDER", "pinecone").strip().lower() or "pinecone"
