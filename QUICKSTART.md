@@ -125,7 +125,17 @@ VITE_SUPABASE_ANON_KEY="your_supabase_anon_key"
 
 You need **four terminals** — for the backend, frontend, MCP server, and admin dashboard.
 
-### Terminal 1 — Start Backend (FastAPI)
+### Terminal 1 — Start MCP Server
+
+```bash
+# From the project root: GIG_INSURANCE_COMPANY/
+.\src\venv\Scripts\activate          # Windows
+# source src/venv/bin/activate       # macOS/Linux
+
+python scripts/start_mcp_server.py
+```
+
+### Terminal 2 — Start Backend (FastAPI)
 
 ```bash
 # From the project root: GIG_INSURANCE_COMPANY/
@@ -144,24 +154,13 @@ On startup the API initializes in this order:
 3. **Classic GICOrchestrator** — ready immediately (no LLM needed)
 4. **LangGraph Orchestrator** — requires `GROQ_API_KEY`; skipped if key is missing
 
-### Terminal 2 — Start Frontend (Vite + React)
+### Terminal 3 — Start Frontend (Vite + React)
 
 ```bash
 # From the frontend folder: GIG_INSURANCE_COMPANY/frontend/
 npm run dev
 ```
-
 The frontend runs at: **http://localhost:5173**
-
-### Terminal 3 — Start MCP Server
-
-```bash
-# From the project root: GIG_INSURANCE_COMPANY/
-.\src\venv\Scripts\activate          # Windows
-# source src/venv/bin/activate       # macOS/Linux
-
-python scripts/start_mcp_server.py
-```
 
 ### Terminal 4 — Start Admin Dashboard
 
