@@ -1300,11 +1300,21 @@ def create_app() -> FastAPI:
                 ]
                 _deep_results = await asyncio.gather(*_deep_tasks, return_exceptions=True)
                 for _city, _profile in zip(escalate_cities, _deep_results):
+                    # Find news from original pulse for this city
+                    _pulse_match = next((p for c, p in zip(COVERED_CITIES, pulse_results) if c == _city), None)
+                    _news_from_pulse = (_pulse_match.get("news_data") or {}) if isinstance(_pulse_match, dict) else {}
+
                     if not isinstance(_profile, Exception):
+                        # Add Pulse news to deep profile for later display aggregation
+                        _profile["pulse_news"] = _news_from_pulse
                         city_mcp_profiles[_city] = _profile
                     else:
-                        # Fallback for failed deep scan
-                        city_mcp_profiles[_city] = {"overall_risk_level": "LOW", "fallback": True}
+                        # Fallback for failed deep scan, but keep pulse news if available
+                        city_mcp_profiles[_city] = {
+                            "overall_risk_level": "LOW", 
+                            "fallback": True,
+                            "pulse_news": _news_from_pulse
+                        }
 
         # ── Identify disrupted cities for worker processing ──────────────
         disrupted_pairs: List[tuple] = []
@@ -1454,6 +1464,14 @@ def create_app() -> FastAPI:
                 if isinstance(h, dict) and h.get("keyword")
             ))
 
+            # ── MERGE PULSE NEWS & DEEP SCAN INTEL ──
+            _pulse_news    = _mcp_profile.get("pulse_news", {})
+            _headlines     = _pulse_news.get("top_headlines", []) if isinstance(_pulse_news, dict) else []
+            _pulse_flags   = _pulse_news.get("disruption_flags", []) if isinstance(_pulse_news, dict) else []
+            
+            # Combine flags from both sources
+            _combined_flags = list(dict.fromkeys(_disrupt_flags + _pulse_flags))
+
             city_results_live.append({
                 "city":                        _city.title(),
                 "overall_risk_level":          _mcp_profile.get("overall_risk_level", "LOW"),
@@ -1464,8 +1482,9 @@ def create_app() -> FastAPI:
                 "weather_hazard_level":        _weather_data.get("hazard_level", "LOW"),
                 "temperature_c":               _weather_data.get("temperature_c", 0),
                 "humidity_percent":            _weather_data.get("humidity_percent", 0),
-                "disruption_flags":            _disrupt_flags,
+                "disruption_flags":            _combined_flags,
                 "tavily_answer":               _market_intel.get("tavily_answer", ""),
+                "news_headlines":              _headlines,
                 "hazard_context":              _market_intel.get("hazard_context", "No hazards detected."),
                 "workers_found":               len(_city_workers),
                 "workers_eligible_for_payout": _city_eligible,
