@@ -110,7 +110,8 @@ export default function CoverageMapTab({ partnerId, partnerData }) {
         if (selectedCity) {
             setHazardLoading(true);
             setLiveHazard(null);
-            fetch("http://localhost:8000/api/hazard/check", {
+            const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+            fetch(`${API_BASE_URL}/api/hazard/check`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ city: selectedCity })
