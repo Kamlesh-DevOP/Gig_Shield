@@ -1,26 +1,26 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap');
 
 :root {
-  /* Light themed purple palette */
-  --bg-dark:      #FAF8FF;
-  --surface-dark: #FFFFFF;
-  --border-dark:  #E2D9F3;
-  --text-dark:    #1A0A2E;
-  --muted-dark:   #7B6899;
+  /* Premium Slate-Navy & Indigo palette */
+  --bg-dark:      #F0F2F7;
+  --surface-dark: #ffffff;
+  --border-dark:  #D6D9EC;
+  --text-dark:    #0E1120;
+  --muted-dark:   #6B7294;
   
-  /* Subtle purple accents */
-  --purple-lt:    #C4A8E0;
-  --purple-mid:   #5B21B6;
-  --purple-dark:  #3B0764;
-  --purple-glow:  rgba(107, 45, 139, 0.10);
-  --accent:       #6B2D8B;
+  /* Indigo accents */
+  --purple-lt:    #8FA0E8;
+  --purple-mid:   #2D3FBF;
+  --purple-dark:  #1A2480;
+  --purple-glow:  rgba(59,79,214,0.10);
+  --accent:       #3B4FD6;
   
-  /* System colors */
-  --green:        #0D7A56;
-  --red:          #B91C1C;
+  /* System colors synced */
+  --green:        #0D9660;
+  --red:          #C0392B;
   
   --font:         'Poppins', sans-serif;
-  --mono:         'Inter', monospace;
+  --mono:         'Inter', sans-serif;
 }
 
 * {
@@ -80,11 +80,14 @@ a {
 /* Sidebar */
 .sidebar {
   width: 260px;
-  background: #F3EEFF;
+  background: #EAECF5;
   border-right: 1px solid var(--border-dark);
   display: flex;
   flex-direction: column;
   padding: 2rem 1rem;
+  height: 100vh;
+  position: sticky;
+  top: 0;
 }
 
 .sidebar-logo {
@@ -96,12 +99,26 @@ a {
   gap: 12px;
   font-weight: 700;
   letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 
 .nav-links {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+  padding-right: 4px; /* Space for scrollbar */
+}
+
+.nav-links::-webkit-scrollbar {
+  width: 4px;
+}
+
+.nav-links::-webkit-scrollbar-thumb {
+  background: var(--border-dark);
+  border-radius: 4px;
 }
 
 .nav-item {
@@ -114,11 +131,42 @@ a {
   transition: all 0.2s ease;
   font-weight: 500;
   font-size: 14px;
+  flex-shrink: 0;
 }
 
 .nav-item:hover, .nav-item.active {
   background: var(--purple-glow);
   color: var(--accent);
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-dark);
+  flex-shrink: 0;
+}
+
+.logout-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0.875rem 1rem;
+  border-radius: 8px;
+  background: none;
+  border: 1.5px solid transparent;
+  color: var(--muted-dark);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(185, 28, 28, 0.05);
+  color: var(--red);
+  border-color: rgba(185, 28, 28, 0.1);
 }
 
 /* Dashboard Header Modern */

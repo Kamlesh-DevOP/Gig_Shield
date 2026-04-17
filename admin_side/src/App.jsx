@@ -1,12 +1,13 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Map as MapIcon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, NavLink, useLocation, Navigate } from 'react-router-dom';
+import { LayoutDashboard, Map as MapIcon, LogOut } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import RegionMap from './pages/RegionMap';
+import LoginPage from './pages/LoginPage';
 
 import logo from './assets/logo1.png';
 
-const Sidebar = () => {
+const Sidebar = ({ onLogout }) => {
   const location = useLocation();
 
   return (
@@ -40,19 +41,45 @@ const Sidebar = () => {
           <span>Regional Insights</span>
         </NavLink>
       </nav>
+
+      <div className="sidebar-footer">
+        <button onClick={onLogout} className="logout-btn">
+          <LogOut size={18} />
+          <span>Sign Out</span>
+        </button>
+      </div>
     </aside>
   );
 };
 
 const App = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('admin_auth') === 'true';
+  });
+
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+    localStorage.setItem('admin_auth', 'true');
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    localStorage.removeItem('admin_auth');
+  };
+
+  if (!isAuthenticated) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
   return (
     <BrowserRouter>
       <div className="layout-container">
-        <Sidebar />
+        <Sidebar onLogout={handleLogout} />
         <main className="main-content">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/map" element={<RegionMap />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
       </div>
@@ -61,3 +88,4 @@ const App = () => {
 };
 
 export default App;
+
