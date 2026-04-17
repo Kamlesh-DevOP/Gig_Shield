@@ -200,12 +200,18 @@ The dashboard runs at: **http://localhost:5173** (or the next available port)
 
 ---
 
-## 🔑 Login Credential
+## 🔑 Login Credentials
 
 ### Registered Accounts
 
 You can also register a new worker via the **Register** page. These are stored in Supabase.
 
+---
+For **admin dashboard**, use the following credentials : 
+```
+- user id: admin
+- password: admin
+```
 ---
 
 ## 🌧️ Running the Disruption Simulation
