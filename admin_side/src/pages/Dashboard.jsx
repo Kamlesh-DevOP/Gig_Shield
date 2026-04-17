@@ -169,7 +169,8 @@ const Dashboard = () => {
         // 3. Background Task: Fetch AI Predictive Analysis (Non-blocking)
         setIsPredicting(true);
         try {
-          const forecastResp = await fetch('http://localhost:8000/api/forecast/analyze', {
+          const backendUrl = import.meta.env.VITE_AI_BACKEND_URL || 'http://localhost:8000';
+          const forecastResp = await fetch(`${backendUrl}/api/forecast/analyze`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
           });
@@ -232,7 +233,8 @@ const Dashboard = () => {
     }, 700);
 
     try {
-      const resp = await fetch('http://localhost:8000/api/simulate/disruption', {
+      const backendUrl = import.meta.env.VITE_AI_BACKEND_URL || 'http://localhost:8000';
+      const resp = await fetch(`${backendUrl}/api/simulate/disruption`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -285,7 +287,8 @@ const Dashboard = () => {
     }, 900);
 
     try {
-      const resp = await fetch('http://localhost:8000/api/live/detect-disruptions', {
+      const backendUrl = import.meta.env.VITE_AI_BACKEND_URL || 'http://localhost:8000';
+      const resp = await fetch(`${backendUrl}/api/live/detect-disruptions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
