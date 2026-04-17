@@ -290,6 +290,7 @@ a {
 /* Utilities */
 .text-danger { color: #F87171; }
 .text-success { color: #34D399; }
+.text-warning { color: #F59E0B; }
 .text-accent { color: var(--purple-lt); }
 .text-secondary { color: var(--muted-dark); }
 
@@ -939,6 +940,12 @@ button:disabled {
 .sim-val-amber { color: #D97706 !important; }
 .sim-val-payout { color: #DC2626 !important; }
 .sim-val-green  { color: #059669 !important; }
+
+.highlight-purple {
+  background: rgba(107, 45, 139, 0.08) !important;
+  border: 1px solid rgba(107, 45, 139, 0.2) !important;
+  box-shadow: 0 4px 15px rgba(107, 45, 139, 0.1);
+}
 
 /* ── Error Banner ── */
 .sim-error-banner {

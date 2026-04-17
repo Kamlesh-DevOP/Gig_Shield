@@ -1491,6 +1491,121 @@ def create_app() -> FastAPI:
             "mcp_server_url":              mcp_server_url,
         }
 
+    # ───────────────────────────────────────────────────────────────────
+    # Fast-Track Portfolio Forecasting (Instant)
+    # ───────────────────────────────────────────────────────────────────
+
+    @application.post("/api/forecast/analyze", tags=["Forecasting"])
+    async def analyze_portfolio_forecast():
+        from datetime import datetime, timezone
+        import os
+
+        scanned_at = datetime.now(timezone.utc).isoformat()
+        supabase_url = os.getenv("SUPABASE_URL", "")
+        supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+
+        try:
+            from supabase import create_client as _create_sb
+            _sb = _create_sb(supabase_url, supabase_key)
+            _resp = _sb.table("gigshield_workers").select("record").execute()
+            all_workers = _resp.data or []
+        except Exception as e:
+            logger.error("forecast_analyze: Supabase fetch failed: %s", e)
+            raise HTTPException(status_code=500, detail="Failed to fetch workers from Supabase")
+
+        total_premium = 0.0
+        forecast_payout_liability = 0.0
+        workers_at_risk_count = 0
+        eligible_workers_count = 0
+        detailed_results = []
+
+        # Identify at-risk workers
+        risk_queue = []
+        for row in all_workers:
+            rec = row.get("record", {})
+            if not isinstance(rec, dict): continue
+            
+            pforecast_income = float(rec.get("forecasted_weekly_income") or rec.get("weekly_income") or 5000)
+            slab = str(rec.get("selected_slab", "")).lower()
+            coverage_mult = 1.0 if "100" in slab else 0.5 if "50" in slab else 0.75
+            prem_pct = 0.048 if coverage_mult == 1.0 else 0.036 if coverage_mult == 0.5 else 0.04
+            total_premium += (pforecast_income * prem_pct)
+
+            p_risk_score = float(rec.get("predicted_risk_score") or 0)
+            p_loss_pct = float(rec.get("predicted_income_loss_pct") or 0)
+            cyclone_level = int(rec.get("cyclone_alert_level") or 0)
+
+            if p_risk_score > 0.5 or p_loss_pct > 0 or cyclone_level > 0:
+                workers_at_risk_count += 1
+                risk_queue.append(rec)
+
+        # Process at-risk workers through the Classic Orchestrator Agent (High Fidelity)
+        if risk_queue and classic_orchestrator:
+            async def process_worker_forecast(rec):
+                try:
+                    # ── DYNAMIC INCOME OVERRIDE ──
+                    cyclone_level = int(rec.get("cyclone_alert_level") or 0)
+                    effective_loss_pct = 30 if cyclone_level == 1 else 45 if cyclone_level == 2 else 65 if cyclone_level >= 3 else 20
+                    avg_inc = float(rec.get("avg_52week_income") or rec.get("weekly_income") or 7500.0)
+                    
+                    # Prepare agent-ready record
+                    test_rec = {**rec}
+                    test_rec["avg_52week_income"] = avg_inc
+                    test_rec["weekly_income"] = avg_inc * ((100 - effective_loss_pct) / 100)
+                    test_rec["disruption_type"] = "cyclone" if cyclone_level > 0 else "market_hazard"
+                    test_rec.setdefault("premium_paid", 1)  # Ensure baseline eligibility for forecast
+                    test_rec.setdefault("cooling_period_completed", 1)
+                    
+                    # ── AGENTIC EXECUTION ──
+                    wf = await classic_orchestrator.process_claim(
+                        pd.DataFrame([test_rec]), 
+                        city=rec.get("city", "Bengaluru")
+                    )
+                    
+                    payout = float(getattr(wf, "payout_amount", 0) or 0)
+                    elig_obj = wf.extras.get("claim_eligibility") if wf.extras else None
+                    is_eligible = bool(getattr(elig_obj, "is_eligible", False))
+                    decision = str(getattr(wf, "decision", "manual_review"))
+
+                    # ── FORCE-INCLUDE ASSUMPTION ──
+                    # If the agent flags for Review but worker is Eligible, include potential payout in forecast
+                    if is_eligible and payout == 0 and decision == "manual_review":
+                        if hasattr(classic_orchestrator, "payout_calculator"):
+                            p_breakdown = classic_orchestrator.payout_calculator.calculate_payout(test_rec, elig_obj)
+                            payout = float(p_breakdown.get("final_payout", 0.0))
+                    
+                    return {
+                        "worker_id": rec.get("worker_id"),
+                        "payout_amount": payout,
+                        "is_eligible": is_eligible,
+                        "decision": decision
+                    }
+                except Exception as ex:
+                    logger.warning("Forecast Agent failed for worker %s: %s", rec.get("worker_id"), ex)
+                    return None
+
+            # Process top at-risk workers in parallel (cap at 25 for cluster stability)
+            tasks = [process_worker_forecast(r) for r in risk_queue[:25]]
+            results = await asyncio.gather(*tasks)
+            
+            for res in results:
+                if res and res["payout_amount"] > 0:
+                    forecast_payout_liability += res["payout_amount"]
+                    eligible_workers_count += 1
+                    detailed_results.append(res)
+
+        return {
+            "scanned_at": scanned_at,
+            "total_workers": len(all_workers),
+            "workers_at_risk": workers_at_risk_count,
+            "eligible_risk_workers": eligible_workers_count,
+            "total_premium": round(total_premium, 2),
+            "total_payout_liability": round(forecast_payout_liability, 2),
+            "net_margin_forecast": round(total_premium - forecast_payout_liability, 2),
+            "detailed_preview": detailed_results
+        }
+
+
     return application
 
 
