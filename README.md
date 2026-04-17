@@ -19,7 +19,7 @@
 
 - 📖 **[Quickstart Guide](./QUICKSTART.md)**: Find step-by-step instructions to run the GIC backend, frontend, MCP Server, and Admin Dashboard locally.
 - 🏗️ **[Project Overview](./project_overview.md)**: Deep dive into our system architecture, Multi-Agent pipelines, and data models.
-- 🧑‍💻 **[Admin Dashboard](./admin_side/README.md)**: Deep dive into our system architecture, Multi-Agent pipelines, and data models.
+- 🧑‍💻 **[Admin Dashboard](./admin_side/README.md)**: One stop solution for all admin needs.
 
 ---
 
