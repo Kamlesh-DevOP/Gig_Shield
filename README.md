@@ -29,9 +29,9 @@
 > **Render Deployment Limitation:** The live backend is hosted on Render's free tier, which is restricted to 512MB of memory. Due to these hardware constraints, some memory-intensive ML features may fail or perform slower on the live demo. We highly recommend running the project locally using our [Quickstart guide](./QUICKSTART.md) for full functionality!
 
 - **Phase 1 - Prototype Demo**: [Watch on YouTube](https://youtu.be/hLz2ZEhvils)
-- **Solution explanation + Financial model + Architecture(part of phase 1)**: [Watch on YouTube](https://youtu.be/8LG6JR4Q7rM)
+    - **Solution explanation + Financial model + Architecture(part of phase 1)**: [Watch on YouTube](https://youtu.be/8LG6JR4Q7rM)
 - **Phase 2 - MVP Demo**: [Watch on YouTube](https://youtu.be/R_gsjeeOfl4)
-- <mark>**Phase 3 - Final Demo**: [Watch on YouTube](willbereplaced)</mark> **(current stage)**
+- $\color{orange}{\text{**Phase 3 - Final Demo**: [Watch on YouTube](willbereplaced)}}$ **(current stage)**
 ### Links
 - **Central Backend URL**: [gig-insurance-company.onrender.com](https://gig-insurance-company.onrender.com/) **(Open this before opening the vercel app)**
 - **User Dashboard App**: [gig-insurance-company-gic.vercel.app](https://gig-insurance-company-gic.vercel.app/)
