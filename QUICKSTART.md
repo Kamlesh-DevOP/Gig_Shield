@@ -9,7 +9,7 @@
 | Tool | Version | Check |
 |------|---------|-------|
 | **Python** | 3.10 – 3.13 | `python --version` |
-| **Node.js** | 18+ | `node --version` |
+| **Node.js** | 22.12+ | `node --version` |
 | **npm** | 9+ | `npm --version` |
 | **Git** | Any | `git --version` |
 
