@@ -32,7 +32,7 @@
 - **Phase 1 - Prototype Demo**: [Watch on YouTube](https://youtu.be/hLz2ZEhvils)
     - **Solution explanation + Financial model + Architecture(part of phase 1)**: [Watch on YouTube](https://youtu.be/8LG6JR4Q7rM)
 - **Phase 2 - MVP Demo**: [Watch on YouTube](https://youtu.be/R_gsjeeOfl4)
-- <mark>**Phase 3 - Final Demo**: [Watch on YouTube](willbereplaced)</mark> **(current stage)**
+- <mark>**Phase 3 - Final Demo**: [Watch on YouTube](https://youtu.be/gUhpddfMdns)</mark> **(current stage)**
 ---
 ### Links
 - **Central Backend URL**: [gig-insurance-company.onrender.com](https://gig-insurance-company.onrender.com/) **(Open this before opening the vercel app)**
