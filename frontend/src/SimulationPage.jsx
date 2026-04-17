@@ -7,6 +7,7 @@ import {
   Brain, Scan, BadgeCheck, XCircle, ChevronRight,
   Banknote, Clock, Percent, FileText, Map, RefreshCw
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import DisruptionTypeTabs from "./DisruptionTypeTabs";
 import CoverageMapTab from "./CoverageMap";
 
@@ -28,6 +29,7 @@ const PIPELINE_STEPS = [
 ];
 
 export default function SimulationPage({ partnerId, partnerData, onBack }) {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("simulation");
   const [city, setCity] = useState(partnerData?.city || "Chennai");
   const [scenario, setScenario] = useState("flood");
@@ -297,6 +299,20 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
       if (claim.decision === "APPROVE" && (claim.payout_amount || 0) > 0) {
         await sleep(800);
         setStep("payout");
+        addLog("💸 Checking payout onboarding status...", "info");
+        const isOnboarded = !!(partnerData?.upi_id || partnerData?.account_number || partnerData?.dbRecord?.upi_id || partnerData?.dbRecord?.account_number);
+
+        if (!isOnboarded) {
+          addLog("⚠️ Payout onboarding NOT completed. Stopping automated rollout.", "warning");
+          setPayoutResult({ 
+            needsOnboarding: true, 
+            amount: claim.payout_amount,
+            status: "pending_onboarding"
+          });
+          setStep("payout");
+          return;
+        }
+
         addLog("💸 Initiating RazorpayX payout simulation...", "info");
         addLog(`   → Contact creation → Fund account linking → Payout transfer`, "data");
         await sleep(1200);
@@ -788,7 +804,7 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
               )}
 
               {/* Payout Result */}
-              {payoutResult && (
+              {payoutResult && !payoutResult.needsOnboarding && (
                 <div className="sim-result-card" style={{
                   background: "linear-gradient(135deg, #ECFDF5, #D1FAE5)",
                   border: "1.5px solid var(--green-bdr)",
@@ -826,28 +842,65 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
                         </div>
                       ))}
                     </div>
-                    {/* <div style={{ marginTop: 12, textAlign: "center" }}>
-                      <button
-                        onClick={async () => {
-                          try {
-                            await fetch(`${API}/api/payout/reset`, {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ payout_id: payoutResult.payout_id }),
-                            });
-                            setPayoutResult(null);
-                            addLog("\u21bb Payout reset \u2014 ready for re-test", "info");
-                          } catch (e) { console.error("Reset failed:", e); }
-                        }}
-                        style={{
-                          fontSize: 11, padding: "6px 16px", borderRadius: 6,
-                          background: "rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.12)",
-                          color: "var(--muted)", cursor: "pointer",
-                        }}
-                      >
-                        Reset Payout (Debug)
-                      </button>
-                    </div> */}
+                  </div>
+                </div>
+              )}
+
+              {/* Needs Onboarding Prompt */}
+              {payoutResult && payoutResult.needsOnboarding && (
+                <div className="sim-result-card" style={{
+                  background: "linear-gradient(135deg, var(--red-bg), rgba(185,28,28,0.12))",
+                  border: "1.5px solid var(--red-bdr)",
+                }}>
+                  <div className="src-header">
+                    <AlertTriangle size={15} color="var(--red)" />
+                    <span>Onboarding Required</span>
+                    <span className="src-badge" style={{ background: "var(--red-bg)", color: "var(--red)", border: "1px solid var(--red-bdr)" }}>
+                      INCOMPLETE
+                    </span>
+                  </div>
+                  <div style={{ padding: "16px 0" }}>
+                    <div style={{ textAlign: "center", marginBottom: "20px" }}>
+                      <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--text)", marginBottom: "8px" }}>
+                        Claim Approved: <span style={{ color: "var(--red)" }}>{fmt(payoutResult.amount)}</span>
+                      </div>
+                      <p style={{ fontSize: "13px", color: "var(--text2)", lineHeight: "1.5" }}>
+                        The claim was successfully calculated, but we cannot rollout the payout because your payment details (UPI/Bank) are not setup.
+                      </p>
+                    </div>
+                    
+                    <button 
+                      onClick={() => navigate("/payout-setup", { 
+                        state: { 
+                          form: { 
+                            worker_id: partnerId.replace("DB", ""), 
+                            ...partnerData 
+                          } 
+                        } 
+                      })}
+                      style={{
+                        width: "100%",
+                        height: "48px",
+                        background: "var(--purple-dark)",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "10px",
+                        fontWeight: 700,
+                        fontSize: "14px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        cursor: "pointer",
+                        boxShadow: "0 4px 12px rgba(59,7,100,0.15)"
+                      }}
+                    >
+                      <Zap size={16} /> Setup Payout Account & Link
+                    </button>
+                    
+                    <div style={{ marginTop: "12px", textAlign: "center", fontSize: "11px", color: "var(--muted)" }}>
+                      Linked account required for InstantPay™ parametric settlement.
+                    </div>
                   </div>
                 </div>
               )}
