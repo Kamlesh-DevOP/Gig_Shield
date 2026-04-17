@@ -260,6 +260,14 @@ const Header = ({ partner, onLogout }) => {
         <span className="hdr-logoname" style={{ cursor: "pointer" }} onClick={() => navigate("/dashboard")}>Gig Insurance Company</span>
       </div>
       <div className="hdr-right" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <button 
+          onClick={() => navigate("/b2b")} 
+          className="btn-premium-outline"
+          style={{ padding: "4px 10px", fontSize: "11px", height: "30px" }}
+          title="B2B Integration Portal"
+        >
+          <Building2 size={13} /> Platform Partner
+        </button>
         <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
           <span className="live-dot" />
           <span className="hdr-zone-label">{partner.zone}</span>
@@ -310,11 +318,13 @@ function LoginPage({ onLogin }) {
     }
 
     // 1. Fetch the worker credentials
-    console.log("Step 1: Checking workers table for ID:", workerId);
+    // Sanitize input: remove common prefixes like "D" or "DB" if user copied them from dashboard
+    const cleanId = workerId.toUpperCase().replace(/^DB?/, "");
+    console.log("Step 1: Checking workers table for ID:", cleanId);
     const { data: worker, error: workerErr } = await supabase
       .from('workers')
       .select('*')
-      .eq('worker_id', workerId)
+      .eq('worker_id', cleanId)
       .eq('password', password)
       .single();
 
@@ -326,11 +336,11 @@ function LoginPage({ onLogin }) {
     }
 
     // 2. Fetch the associated gigshield record (optional/fallback-safe)
-    console.log("Step 2: Fetching metrics from gigshield_workers for ID:", workerId);
+    console.log("Step 2: Fetching metrics from gigshield_workers for ID:", cleanId);
     const { data: gsRecord, error: gsErr } = await supabase
       .from('gigshield_workers')
       .select('record, payout_method, upi_id, bank_name, account_number, ifsc_code, account_holder')
-      .eq('worker_id', workerId)
+      .eq('worker_id', cleanId)
       .single();
 
     if (gsErr) console.warn("Could not find gigshield_workers record:", gsErr.message);
@@ -1498,16 +1508,37 @@ function ClaimDetailView({ partnerId, evaluation, evalLoading, paidForNextWeek, 
   const navigate = useNavigate();
   const partner = PARTNERS[partnerId];
   if (!partner) return null;
-  const pricing = useMemo(() => computePricing(partner), [partner]);
-  const p = pricing;
 
   const [calcStep, setCalcStep] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isSimulatingDisruption, setIsSimulatingDisruption] = useState(false);
+
+  const pricing = useMemo(() => {
+    let p = computePricing(partner);
+    if (isSimulatingDisruption) {
+      const thresh = Math.round(p.avg * 0.75);
+      const simEarning = Math.round(thresh * 0.6);
+      const simLoss = thresh - simEarning;
+      const simRainPct = 0.85;
+      const defaults = partner.pastWeeklyPaid.filter(x => x === false).length;
+      let coverable = simLoss * (1 - (defaults * 0.02));
+      if (defaults === 0 && !partner.isNewCustomer) coverable *= 1.13;
+      const payout = Math.round(coverable * simRainPct * p.tier.cover);
+      return {
+        ...p, currentEarning: simEarning, loss: simLoss, 
+        maxRainfall: 18, rainCovPct: simRainPct, payout, claimTriggered: true,
+        disruptedDays: [{ day: "Wed", rainfallCm: 18, disrupted: true }]
+      };
+    }
+    return p;
+  }, [partner, isSimulatingDisruption]);
+
+  const p = pricing;
 
   const steps = [
     { label: "10-Week Rolling Avg", val: fmt(p.avg), icon: <BarChart2 size={16} /> },
     { label: "75% Income Threshold", val: fmt(p.threshold), icon: <Target size={16} /> },
-    { label: "Actual Earnings (this week)", val: fmt(p.currentEarning), icon: <Banknote size={16} />, highlight: p.currentEarning < p.threshold },
+    { label: isSimulatingDisruption ? "Actual Earnings (Simulated)" : "Actual Earnings (this week)", val: fmt(p.currentEarning), icon: <Banknote size={16} />, highlight: p.currentEarning < p.threshold },
     { label: "Income Loss Gap", val: fmt(p.loss), icon: <TrendingDown size={16} />, highlight: p.loss > 0 },
     { label: "Rain Trigger Adjustment", val: `${(p.rainCovPct * 100).toFixed(0)}%`, icon: <CloudRain size={16} /> },
     { label: "Final Parametric Payout", val: fmt(p.payout), icon: <ShieldCheck size={16} />, highlight: p.payout > 0, finished: true },
@@ -1522,6 +1553,7 @@ function ClaimDetailView({ partnerId, evaluation, evalLoading, paidForNextWeek, 
       setCalcStep(prev => {
         if (prev >= steps.length - 1) {
           clearInterval(interval);
+          setIsPlaying(false);
           return prev;
         }
         return prev + 1;
@@ -1658,19 +1690,49 @@ function ClaimDetailView({ partnerId, evaluation, evalLoading, paidForNextWeek, 
           )}
         </div>
 
-        {/* 2. Interactive XAI Story Calculation */}
+        {/* Explanation Section */}
+        <div style={{ marginBottom: 20, display: "flex", gap: 12 }}>
+          <div className="section-card" style={{ flex: 1, margin: 0, padding: 16, border: "1px solid var(--border)", background: p.payout > 0 ? "var(--green-bg)" : "var(--bg)" }}>
+             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ padding: 8, borderRadius: 10, background: p.payout > 0 ? "var(--green)" : "var(--purple-lt)", color: "white" }}>
+                  {p.payout > 0 ? <Zap size={16} /> : <AlertCircle size={16} />}
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
+                    {p.payout > 0 ? "Claim Triggered!" : "Understanding the No-Payout Scenario"}
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+                    {p.payout > 0 
+                      ? `Your earnings fell ${fmt(p.loss)} below the safety threshold.` 
+                      : `You earned ${fmt(p.currentEarning)} this week. Since this is ABOVE your protection threshold of ${fmt(p.threshold)}, no claim is active.`}
+                  </div>
+                </div>
+             </div>
+          </div>
+          <button 
+            className={`btn-premium${isSimulatingDisruption ? "-outline" : ""}`}
+            onClick={() => setIsSimulatingDisruption(!isSimulatingDisruption)}
+            style={{ width: 220, fontSize: 12 }}
+          >
+            {isSimulatingDisruption ? "Reset to Actual Data" : "Simulate Low-Earning Week"}
+          </button>
+        </div>
         <div className="section-card">
-          <div className="section-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span>Animated Calculation Breakdown (XAI)</span>
-            <button className="btn-text-only" onClick={playStory} style={{ fontSize: 13, color: "var(--purple)", fontWeight: 700 }}>
-              <Zap size={14} /> Replay Story
+          <div className="loyalty-header">
+            <div>
+              <div className="section-title">Animated Calculation Breakdown (XAI)</div>
+              <div className="section-sub">Step-by-step logic orchestration by GIC ML engine</div>
+            </div>
+            <button className="btn-secondary" onClick={playStory} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Zap size={14} className={isPlaying ? "spin" : ""} /> {isPlaying ? "Processing..." : "Replay Story"}
             </button>
           </div>
-          <div className="calc-story-container" style={{ marginTop: 20 }}>
+          
+          <div className="calc-story-container">
             <div className="story-steps">
               {steps.map((s, i) => (
                 <div key={i} className={`story-step ${calcStep >= i ? "visible" : ""} ${s.highlight ? "highlight" : ""} ${s.finished && calcStep === i ? "pulse" : ""}`} 
-                     style={{ opacity: calcStep >= i ? 1 : 0.2, transform: calcStep >= i ? "translateX(0)" : "translateX(-10px)", transition: "all 0.5s ease" }}>
+                     style={{ opacity: calcStep >= i ? 1 : 0.2 }}>
                   <div className="step-circle">{s.icon}</div>
                   <div className="step-info">
                     <div className="step-label">{s.label}</div>
@@ -1681,8 +1743,8 @@ function ClaimDetailView({ partnerId, evaluation, evalLoading, paidForNextWeek, 
               ))}
             </div>
             {calcStep === steps.length - 1 && p.payout > 0 && (
-              <div className="claim-approved-badge" style={{ marginTop: 30, animation: "slide-up 0.4s ease forwards" }}>
-                <CheckCircle size={20} /> Instant Roll-out Verified: <strong>{fmt(p.payout)} credited to ending {partner.bankId}</strong>
+              <div className="claim-approved-badge" style={{ marginTop: 30 }}>
+                <ShieldCheck size={20} /> Instant Roll-out Verified: <strong>{fmt(p.payout)} credited to {partner.bankId}</strong>
               </div>
             )}
           </div>
@@ -1708,34 +1770,56 @@ function ClaimDetailView({ partnerId, evaluation, evalLoading, paidForNextWeek, 
           </div>
         </div>
 
-        {/* 3. Rewards & Penalties Timeline (52-Week Dot View) */}
+        {/* 3. Rewards & Penalties Timeline (52-Week Square View) */}
         <div className="section-card">
-          <div className="section-title">52-Week Payment & Loyalty Timeline</div>
-          <div className="section-sub">Visualization of your consistent contributions and automated claims</div>
-          <div className="timeline-dots-container" style={{ padding: "30px 0" }}>
-            <div className="dots-grid" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <div className="loyalty-header">
+            <div>
+              <div className="section-title">52-Week Loyalty Timeline</div>
+              <div className="section-sub">Square-based contribution graph & automated claims history</div>
+            </div>
+            <div className="streak-box">
+              <Zap size={18} fill="#EA580C" color="#EA580C" />
+              <div>
+                <div className="streak-num">42 Weeks</div>
+                <div className="streak-label">Active Streak</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="timeline-squares-container">
+            <div className="squares-grid">
               {Array.from({ length: 52 }).map((_, i) => {
                 const isRecent = i < 10;
                 const status = isRecent 
                   ? (partner.pastWeeklyPaid[i] ? (partner.pastWeeklyClaimed[i] ? "claimed" : "paid") : "defaulted")
-                  : (Math.random() > 0.05 ? "paid" : "defaulted"); // Mocking history
+                  : (Math.random() > 0.05 ? "paid" : "defaulted");
                 
-                const dotColor = status === "claimed" ? "#FBBF24" : status === "paid" ? "#10B981" : "#EF4444";
+                let sqClass = "square-paid";
+                if (status === "claimed") sqClass = "square-claim";
+                else if (status === "defaulted") sqClass = "square-default";
+                else {
+                  // Simulate different green intensities based on i
+                  if (i % 7 === 0) sqClass = "square-ultra";
+                  else if (i % 3 === 0) sqClass = "square-high";
+                  else sqClass = "square-verified";
+                }
                 
                 return (
-                  <div key={i} className="timeline-dot-wrap" style={{ position: "relative" }}>
-                    <div className="timeline-dot" style={{ 
-                      width: 12, height: 12, borderRadius: "50%", background: dotColor,
-                      cursor: "pointer", transition: "transform 0.2s"
-                    }} />
-                  </div>
+                  <div key={i} className={`timeline-square ${sqClass}`} title={`Week ${52-i}: ${status}`} />
                 );
               })}
             </div>
           </div>
           <div className="history-footer">
-            <span>Legend: <span className="dot" style={{ background: "#10B981" }} /> Paid &nbsp;·&nbsp; <span className="dot" style={{ background: "#EF4444" }} /> Default &nbsp;·&nbsp; <span className="dot" style={{ background: "#FBBF24" }} /> Claim Paid</span>
-            <span>Loyalty Tier: <strong style={{ color: "var(--green)" }}>Diamond (52-wk non-defaulter)</strong></span>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 11, color: "var(--muted)" }}>
+              <span>Less</span>
+              <div className="timeline-square square-paid" />
+              <div className="timeline-square square-verified" />
+              <div className="timeline-square square-high" />
+              <div className="timeline-square square-ultra" />
+              <span>More Contributions</span>
+            </div>
+            <span>Loyalty Tier: <strong style={{ color: "var(--green)" }}>Diamond Partner</strong></span>
           </div>
         </div>
 

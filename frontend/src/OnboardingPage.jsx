@@ -90,19 +90,34 @@ function Step2({ form, setForm, errors }) {
         />
       </Field>
 
-      <Field label="Platform" icon={Smartphone} error={errors.platform}>
-        <select
-          id="ob-platform"
-          className="l-input ob-select"
-          value={form.platform}
-          onChange={(e) => setForm((f) => ({ ...f, platform: e.target.value }))}
-        >
-          <option value="">Select platform</option>
-          {PLATFORMS.map((p) => (
-            <option key={p} value={p}>{p}</option>
-          ))}
-        </select>
-      </Field>
+      <div style={{ marginBottom: 18 }}>
+        <label className="l-field-label">Platforms & Ecosystems</label>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 10 }}>
+          {PLATFORMS.map((p) => {
+            const isSelected = form.platforms && form.platforms.includes(p);
+            return (
+              <div 
+                key={p} 
+                className={`platform-pill-selectable ${isSelected ? 'active' : ''}`}
+                onClick={() => {
+                  setForm(f => {
+                    const current = f.platforms || [];
+                    const next = current.includes(p) 
+                      ? current.filter(x => x !== p) 
+                      : [...current, p];
+                    return { ...f, platforms: next };
+                  });
+                }}
+              >
+                <Smartphone size={14} />
+                <span>{p}</span>
+                {isSelected && <BadgeCheck size={14} className="check-icon" />}
+              </div>
+            );
+          })}
+        </div>
+        {errors.platform && <div className="l-error" style={{ marginTop: 6 }}><AlertTriangle size={13} /> {errors.platform}</div>}
+      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         <Field label="Outlet ID" icon={Building2} error={errors.outlet_id}>
@@ -174,7 +189,7 @@ export default function OnboardingPage({ onBack }) {
   const [globalError, setGlobalError] = useState("");
 
   const [form, setForm] = useState({
-    name: "", password: "", city: "", platform: "", outlet_id: "", worker_id: "",
+    name: "", password: "", city: "", platforms: [], outlet_id: "", worker_id: "",
   });
 
   // ── Validation ─────────────────────────────────────────────────────────────
@@ -186,7 +201,7 @@ export default function OnboardingPage({ onBack }) {
     }
     if (stepNum === 2) {
       if (!form.city.trim()) errs.city = "City is required";
-      if (!form.platform) errs.platform = "Select a platform";
+      if (!form.platforms || form.platforms.length === 0) errs.platform = "Select at least one platform";
       if (!form.outlet_id || isNaN(form.outlet_id)) errs.outlet_id = "Valid outlet ID required";
       if (!form.worker_id || isNaN(form.worker_id)) errs.worker_id = "Valid worker ID required";
     }
@@ -213,9 +228,9 @@ export default function OnboardingPage({ onBack }) {
       name: form.name.trim(),
       password: form.password,
       city: form.city.trim(),
-      platform: form.platform,
-      outlet_id: parseInt(form.outlet_id, 10),
-      worker_id: parseInt(form.worker_id, 10),
+      platform: form.platforms.join(", "),
+      outlet_id: parseInt(form.outlet_id, 10) || 0,
+      worker_id: parseInt(form.worker_id, 10) || 0,
     };
 
     const { error } = await supabase.from("workers").insert([payload]);

@@ -3,7 +3,8 @@ import {
     X, Building2, Zap, Database, MapPin, BarChart2,
     ShieldCheck, ChevronRight, CheckCircle, Code2,
     ArrowRight, Users, TrendingUp, AlertTriangle,
-    Lock, Radio, Copy, Check, Webhook, Cpu
+    Lock, Radio, Copy, Check, Webhook, Cpu, Activity,
+    Terminal, Key
 } from "lucide-react";
 
 // ── Mock API code snippets ─────────────────────────────────────────────────────
@@ -141,9 +142,74 @@ function CodeBlock({ code, lang }) {
     );
 }
 
+function MockTerminal({ logs, progress, success }) {
+    return (
+        <div className="b2b-terminal">
+            <div className="b2b-terminal-header">
+                <div className="b2b-terminal-dots">
+                    <span style={{ background: "#FF5F56" }} />
+                    <span style={{ background: "#FFBD2E" }} />
+                    <span style={{ background: "#27C93F" }} />
+                </div>
+                <div className="b2b-terminal-title">gic-api-connection-test.sh</div>
+            </div>
+            <div className="b2b-terminal-body">
+                {logs.length === 0 && <div className="b2b-terminal-idle">Click 'Run Connection Test' to verify your integration...</div>}
+                {logs.map((log, i) => (
+                    <div key={i} className="b2b-terminal-line">
+                        <span className="b2b-terminal-prompt">$</span> {log}
+                    </div>
+                ))}
+                {progress > 0 && progress < 100 && (
+                    <div className="b2b-terminal-progress">
+                        [{"#".repeat(Math.floor(progress / 5)) + ".".repeat(20 - Math.floor(progress / 5))}] {Math.floor(progress)}%
+                    </div>
+                )}
+                {success && (
+                    <div className="b2b-terminal-success">
+                        <CheckCircle size={14} /> CONNECTION VERIFIED SUCCESSFULLY
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 export default function B2BPartnerPortal({ onBack }) {
     const [activeStep, setActiveStep] = useState(0);
     const [showWizard, setShowWizard] = useState(false);
+    const [isTesting, setIsTesting] = useState(false);
+    const [testProgress, setTestProgress] = useState(0);
+    const [testLogs, setTestLogs] = useState([]);
+    const [testSuccess, setTestSuccess] = useState(false);
+
+    const runConnectionTest = () => {
+        setIsTesting(true);
+        setTestProgress(0);
+        setTestLogs([]);
+        setTestSuccess(false);
+
+        const logs = [
+            { m: "Initializing GIC Secure Handshake...", t: 400 },
+            { m: "Validating API Key: gic_live_sk_8294...", t: 1200 },
+            { m: "Connection established with Platform Gateway", t: 2000 },
+            { m: "Syncing sample worker dataset (10 records)", t: 3000 },
+            { m: "Verifying IRDAI parametric compliance nodes", t: 4500 },
+            { m: "Activating Webhook: https://api.partner.io/wic/hooks", t: 5500 },
+            { m: "B2B Tunnel Active. System Ready. ✓", t: 6500 },
+        ];
+
+        logs.forEach((log, i) => {
+            setTimeout(() => {
+                setTestLogs(prev => [...prev, log.m]);
+                setTestProgress(((i + 1) / logs.length) * 100);
+                if (i === logs.length - 1) {
+                    setTestSuccess(true);
+                    setIsTesting(false);
+                }
+            }, log.t);
+        });
+    };
 
     return (
         <div className="b2b-overlay" onClick={e => e.target === e.currentTarget && onBack()}>
@@ -367,7 +433,43 @@ export default function B2BPartnerPortal({ onBack }) {
                                             <div className="b2b-step-code-title">
                                                 <Radio size={11} style={{ color: "#10B981" }} /> Live code sample
                                             </div>
-                                            <CodeBlock code={STEP_CODE[activeStep]} lang={activeStep === 0 ? "shell" : "javascript"} />
+                                            <CodeBlock code={STEP_CODE[activeStep].code} lang={activeStep === 0 ? "shell" : "javascript"} />
+
+                                            {activeStep === 0 && (
+                                                <div className="b2b-connection-test">
+                                                    <div className="b2b-step-code-title" style={{ marginTop: 24 }}>
+                                                        <Activity size={11} color="#6366F1" /> Connection Mock
+                                                    </div>
+                                                    <MockTerminal logs={testLogs} progress={testProgress} success={testSuccess} />
+                                                    
+                                                    {!testSuccess ? (
+                                                        <button 
+                                                            className={`b2b-test-btn ${isTesting ? "testing" : ""}`}
+                                                            onClick={runConnectionTest}
+                                                            disabled={isTesting}
+                                                        >
+                                                            {isTesting ? <><Zap size={14} className="spin" /> Testing...</> : 
+                                                            <><Zap size={14} /> Run Connection Test</>}
+                                                        </button>
+                                                    ) : (
+                                                        <div className="b2b-success-actions">
+                                                            <div className="b2b-api-key-box">
+                                                                <div className="b2b-key-label"><Key size={10} /> YOUR TEST API KEY</div>
+                                                                <div className="b2b-key-val">gic_test_sk_92f0...8a1c</div>
+                                                                <button className="b2b-key-copy" onClick={() => {
+                                                                    navigator.clipboard.writeText("gic_test_sk_92f02b8a1c");
+                                                                    alert("API Key copied to clipboard!");
+                                                                }}>
+                                                                    <Copy size={12} />
+                                                                </button>
+                                                            </div>
+                                                            <button className="b2b-dashboard-btn" onClick={() => alert("Partner Dashboard coming soon!")}>
+                                                                Enter Partner Dashboard <ArrowRight size={14} />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
 
                                             {/* Progress */}
                                             <div className="b2b-wizard-progress">
