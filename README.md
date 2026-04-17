@@ -19,6 +19,7 @@
 
 - 📖 **[Quickstart Guide](./QUICKSTART.md)**: Find step-by-step instructions to run the GIC backend, frontend, MCP Server, and Admin Dashboard locally.
 - 🏗️ **[Project Overview](./project_overview.md)**: Deep dive into our system architecture, Multi-Agent pipelines, and data models.
+- 🧑‍💻 **[Admin Dashboard](./admin_side/README.md)**: Deep dive into our system architecture, Multi-Agent pipelines, and data models.
 
 ---
 
@@ -30,7 +31,7 @@
 - **Phase 1 - Prototype Demo**: [Watch on YouTube](https://youtu.be/hLz2ZEhvils)
 - **Solution explanation + Financial model + Architecture(part of phase 1)**: [Watch on YouTube](https://youtu.be/8LG6JR4Q7rM)
 - **Phase 2 - MVP Demo**: [Watch on YouTube](https://youtu.be/R_gsjeeOfl4)
-- ==**Phase 3 - Final Demo**: [Watch on YouTube](willbereplaced)== **(current stage)**
+- <mark>**Phase 3 - Final Demo**: [Watch on YouTube](willbereplaced)</mark> **(current stage)**
 ### Links
 - **Central Backend URL**: [gig-insurance-company.onrender.com](https://gig-insurance-company.onrender.com/) **(Open this before opening the vercel app)**
 - **User Dashboard App**: [gig-insurance-company-gic.vercel.app](https://gig-insurance-company-gic.vercel.app/)
