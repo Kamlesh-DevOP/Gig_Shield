@@ -302,6 +302,9 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
         await sleep(1200);
 
         try {
+          const reasonStr = `${scenario === "flood" ? "Heavy Rainfall" : scenario === "cyclone" ? "Cyclone" : "Normal"} - ${workerPayload.rainfall_cm * 10}mm`;
+          const rolloutDateStr = new Date().toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' });
+
           const payoutRes = await fetch(`${API}/api/payout/initiate`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -309,13 +312,13 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
               worker_id: workerPayload.worker_id,
               amount: claim.payout_amount,
               claim_trace_id: claim.trace_id || `sim_${Date.now()}`,
-              reason: `Simulation payout: ${scenario} disruption in ${city}`,
+              reason: reasonStr,
             }),
           });
 
           if (payoutRes.ok) {
             const payoutData = await payoutRes.json();
-            setPayoutResult(payoutData);
+            setPayoutResult({ ...payoutData, rolloutDate: rolloutDateStr, rolloutReason: reasonStr });
             addLog(`✅ Payout ${payoutData.demo ? "(Demo)" : ""} initiated successfully!`, "success");
             addLog(`   💳 Payout ID: ${payoutData.payout_id}`, "data");
             addLog(`   📱 Mode: ${payoutData.mode} → ${payoutData.destination || "linked account"}`, "data");
@@ -323,11 +326,11 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
             addLog(`   💰 Amount: ${fmt(payoutData.amount)}`, "data");
           } else {
             addLog(`⚠️  Payout API returned ${payoutRes.status}. Backend may not be configured.`, "warning");
-            setPayoutResult({ status: "simulated", amount: claim.payout_amount, demo: true, payout_id: `sim_${Date.now()}`, mode: "UPI", utr: `UTR${Math.floor(Math.random() * 999999999)}` });
+            setPayoutResult({ status: "simulated", amount: claim.payout_amount, demo: true, payout_id: `sim_${Date.now()}`, mode: "UPI", utr: `UTR${Math.floor(Math.random() * 999999999)}`, rolloutDate: rolloutDateStr, rolloutReason: reasonStr });
           }
         } catch (payErr) {
           addLog(`⚠️  Payout simulation failed: ${payErr.message}. Showing mock result.`, "warning");
-          setPayoutResult({ status: "simulated", amount: claim.payout_amount, demo: true, payout_id: `sim_${Date.now()}`, mode: "UPI", utr: `UTR${Math.floor(Math.random() * 999999999)}` });
+          setPayoutResult({ status: "simulated", amount: claim.payout_amount, demo: true, payout_id: `sim_${Date.now()}`, mode: "UPI", utr: `UTR${Math.floor(Math.random() * 999999999)}`, rolloutDate: rolloutDateStr, rolloutReason: reasonStr });
         }
 
         addLog("━━━━━━━━━━━━━━━━━━", "info");
@@ -395,7 +398,7 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
 
           {/* ── Controls ── */}
           <div className="sim-controls">
-            <div className="sim-control-group">
+            {/* <div className="sim-control-group">
               <label className="sim-label">
                 <MapPin size={13} /> City
               </label>
@@ -407,7 +410,7 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
               >
                 {cities.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
-            </div>
+            </div> */}
 
             <div className="sim-control-group" style={{ flex: 2 }}>
               <label className="sim-label">
@@ -814,6 +817,8 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
                         ["UTR", payoutResult.utr || "Pending"],
                         ["Destination", payoutResult.destination || "Linked Account"],
                         ["Status", payoutResult.status?.toUpperCase()],
+                        ["Rollout Date", payoutResult.rolloutDate || new Date().toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' })],
+                        ["Reason", payoutResult.rolloutReason || payoutResult.reason || "Parametric Claim"],
                       ].map(([l, v]) => (
                         <div key={l} className="sd-detail-row">
                           <span className="sd-detail-label">{l}</span>
@@ -821,7 +826,7 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
                         </div>
                       ))}
                     </div>
-                    <div style={{ marginTop: 12, textAlign: "center" }}>
+                    {/* <div style={{ marginTop: 12, textAlign: "center" }}>
                       <button
                         onClick={async () => {
                           try {
@@ -842,7 +847,7 @@ export default function SimulationPage({ partnerId, partnerData, onBack }) {
                       >
                         Reset Payout (Debug)
                       </button>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               )}

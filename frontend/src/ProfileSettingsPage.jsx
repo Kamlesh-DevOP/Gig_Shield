@@ -1,16 +1,46 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   User, Shield, CreditCard, Bell, Lock,
   LogOut, ArrowLeft, ChevronRight, Zap,
   Smartphone, Landmark, MapPin, Briefcase,
   CheckCircle2, AlertCircle, Save, BadgeCheck,
-  ShieldCheck, Info
+  ShieldCheck, Info, Clock, Banknote, HelpCircle
 } from "lucide-react";
+import { supabase } from "./supabaseClient";
+
+const fmt = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
 
 export default function ProfileSettingsPage({ partner, onBack, onLogout }) {
   const [activeTab, setActiveTab] = useState("profile"); // 'profile', 'payout', 'plan', 'security'
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [payouts, setPayouts] = useState([]);
+  const [payoutsLoading, setPayoutsLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === "payout" && partner.id.startsWith("DB")) {
+      fetchPayoutHistory();
+    }
+  }, [activeTab, partner.id]);
+
+  const fetchPayoutHistory = async () => {
+    setPayoutsLoading(true);
+    try {
+      const workerId = parseInt(partner.id.replace("DB", ""));
+      const { data, error } = await supabase
+        .from('payout_transactions')
+        .select('*')
+        .eq('worker_id', workerId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPayouts(data || []);
+    } catch (err) {
+      console.error("Error fetching payouts:", err);
+    } finally {
+      setPayoutsLoading(false);
+    }
+  };
 
   const tabs = [
     { id: "profile", label: "My Profile", icon: User },
@@ -34,26 +64,12 @@ export default function ProfileSettingsPage({ partner, onBack, onLogout }) {
   };
 
   return (
-    <div style={{
-      display: "flex",
-      background: "var(--bg)",
-      fontFamily: "'Poppins', system-ui, -apple-system, sans-serif",
-      minHeight: "100vh"
-    }}>
+    <div className="profile-view">
       {/* ── Sidebar ── */}
-      <aside style={{
-        width: "280px",
-        background: "var(--surface2)",
-        borderRight: "1px solid var(--border)",
-        display: "flex",
-        flexDirection: "column",
-        position: "sticky",
-        top: 0,
-        height: "100vh"
-      }}>
-        <div style={{ padding: "32px 24px" }}>
+      <aside className="profile-aside">
+        <div className="profile-aside-inner">
           <button
-            className="back-btn"
+            className="back-btn profile-back-btn"
             onClick={onBack}
             style={{
               marginBottom: "32px",
@@ -72,7 +88,7 @@ export default function ProfileSettingsPage({ partner, onBack, onLogout }) {
             <ArrowLeft size={16} /> Dashboard
           </button>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "40px" }}>
+          <div className="profile-user-info" style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "40px" }}>
             <div style={{
               width: "48px",
               height: "48px",
@@ -93,11 +109,12 @@ export default function ProfileSettingsPage({ partner, onBack, onLogout }) {
             </div>
           </div>
 
-          <nav style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <nav className="profile-nav">
             {tabs.map(Tab => (
               <button
                 key={Tab.id}
                 onClick={() => setActiveTab(Tab.id)}
+                className="profile-nav-btn"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -121,7 +138,7 @@ export default function ProfileSettingsPage({ partner, onBack, onLogout }) {
           </nav>
         </div>
 
-        <div style={{ marginTop: "auto", padding: "24px", borderTop: "1px solid var(--border)" }}>
+        <div className="profile-user-info" style={{ marginTop: "auto", padding: "24px", borderTop: "1px solid var(--border)" }}>
           <button
             onClick={onLogout}
             style={{
@@ -146,7 +163,8 @@ export default function ProfileSettingsPage({ partner, onBack, onLogout }) {
       </aside>
 
       {/* ── Main Content ── */}
-      <main style={{ flex: 1, padding: "48px 64px", overflowY: "auto", maxHeight: "100vh" }}>
+      <main className="profile-main" style={{ overflowY: "auto", maxHeight: "100vh" }}>
+
 
         {activeTab === "profile" && (
           <div style={{ maxWidth: "620px" }}>
@@ -343,7 +361,8 @@ export default function ProfileSettingsPage({ partner, onBack, onLogout }) {
               background: "var(--surface)",
               padding: "20px",
               borderRadius: "14px",
-              border: "1px solid var(--border)"
+              border: "1px solid var(--border)",
+              marginBottom: "32px"
             }}>
               <h4 style={{ fontSize: "13px", fontWeight: 600, marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px", color: "var(--text)" }}>
                 <Info size={14} color="var(--purple)" /> Why verify your account?
@@ -351,6 +370,72 @@ export default function ProfileSettingsPage({ partner, onBack, onLogout }) {
               <p style={{ fontSize: "13px", color: "var(--muted)", lineHeight: "1.5" }}>
                 Our autonomous claims engine uses this account for <strong>Lightning Fast Payouts</strong> during red-alert weather events. Keep this updated to avoid delays.
               </p>
+            </div>
+
+            {/* ── Payout History ── */}
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+                <Clock size={18} color="var(--purple)" />
+                <h3 style={{ fontSize: "18px", fontWeight: 600, color: "var(--purple-dark)" }}>Recent Payout History</h3>
+              </div>
+
+              <div style={{
+                background: "var(--surface)",
+                borderRadius: "16px",
+                border: "1px solid var(--border)",
+                overflow: "hidden"
+              }}>
+                {payoutsLoading ? (
+                  <div style={{ padding: "40px", textAlign: "center", color: "var(--muted)" }}>
+                    <div className="spin" style={{ display: "inline-block", marginRight: "10px" }}><Zap size={20} /></div>
+                    Fetching payout records...
+                  </div>
+                ) : payouts.length > 0 ? (
+                  <table className="history-table">
+                    <thead>
+                      <tr>
+                        <th>Date & Time</th>
+                        <th>Amount</th>
+                        <th>Reason / Event</th>
+                        <th>Mode</th>
+                        <th>Status</th>
+                        <th>UTR / Reference</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payouts.map(p => (
+                        <tr key={p.id}>
+                          <td style={{ color: "var(--text2)" }}>
+                            <div style={{ fontWeight: 500 }}>{new Date(p.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                            <div style={{ fontSize: "11px", opacity: 0.6 }}>{new Date(p.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</div>
+                          </td>
+                          <td style={{ fontWeight: 700, color: "var(--green)", fontFamily: "var(--mono)" }}>{fmt(p.amount)}</td>
+                          <td style={{ fontSize: "12px", color: "var(--text2)", fontWeight: 500 }}>{p.reason || "Parametric Settlement"}</td>
+                          <td style={{ fontSize: "12px", color: "var(--muted)" }}>{p.mode}</td>
+                          <td>
+                            <span className={`history-badge`} style={{
+                              background: p.status === 'processed' || p.status === 'demo_success' ? 'var(--green-bg)' : 'var(--purple-pale)',
+                              color: p.status === 'processed' || p.status === 'demo_success' ? 'var(--green)' : 'var(--purple)',
+                              borderColor: p.status === 'processed' || p.status === 'demo_success' ? 'var(--green-bdr)' : 'var(--purple-lt)',
+                            }}>
+                              {p.status === 'processed' || p.status === 'demo_success' ? 'Credited' : p.status}
+                            </span>
+                          </td>
+                          <td style={{ fontFamily: "var(--mono)", fontSize: "11px", color: "var(--muted)" }}>
+                            {p.utr || "Pending"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div style={{ padding: "40px", textAlign: "center", color: "var(--muted)" }}>
+                    <Banknote size={40} style={{ opacity: 0.2, marginBottom: "12px" }} />
+                    <div style={{ fontSize: "14px" }}>No payout records found yet.</div>
+                    <div style={{ fontSize: "12px", marginTop: "4px" }}>Payouts will appear here as soon as claims are approved.</div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

@@ -117,6 +117,9 @@
   .hdr-logoname { font-size:15px; font-weight:700; color:var(--purple-dark); letter-spacing:-0.3px; }
   .live-dot { width:7px; height:7px; border-radius:50%; background:var(--green); animation:livepulse 1.8s ease-in-out infinite; }
   @keyframes livepulse { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
+
+  .spin { animation: spin 2s linear infinite; display: inline-flex; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   .hdr-zone-label { font-size:12px; color:var(--muted); font-weight:500; }
   .hdr-avatar {
     width:32px; height:32px; background:var(--purple-pale);
@@ -2640,7 +2643,7 @@ button:active {
 .square-verified { background: #86EFAC; }
 .square-high { background: #22C55E; }
 .square-ultra { background: #166534; }
-.square-default { background: #FEE2E2; border-color: #FECACA; }
+.square-default { background: var(--red); border-color: var(--red-bdr); }
 .square-claim { background: #FBBF24; box-shadow: 0 0 8px rgba(251, 191, 36, 0.3); }
 
 .loyalty-header {
@@ -2947,3 +2950,128 @@ body.theme-blinkit .sim-log-header { background: #FFFBE5; }
 body.theme-blinkit .sim-radar { background: rgba(248,202,71,0.15); border-color: rgba(248,202,71,0.3); }
 body.theme-blinkit .radar-ring { border-color: rgba(248,202,71,0.25); }
 
+
+/* ───────────────────────────────────────────────────────────────────────────
+   LOGIN THEME - always applied on / and /register, never platform-specific
+   Deep slate-navy + indigo: clean, premium fintech aesthetic
+   ─────────────────────────────────────────────────────────────────────────── */
+body.theme-login {
+  --bg:          #F0F2F7;
+  --surface:     #ffffff;
+  --surface2:    #EAECF5;
+  --border:      #D6D9EC;
+  --border2:     #BCC1DC;
+  --text:        #0E1120;
+  --text2:       #252B4B;
+  --muted:       #6B7294;
+  --purple:      #3B4FD6;
+  --purple-mid:  #2D3FBF;
+  --purple-dark: #1A2480;
+  --purple-glow: rgba(59,79,214,0.10);
+  --purple-pale: rgba(59,79,214,0.07);
+  --purple-lt:   #8FA0E8;
+  --text-on-primary:       #FFFFFF;
+  --text-on-primary-muted: #BCC8FF;
+  --green:       #0D9660;
+  --green-bg:    rgba(13,150,96,0.08);
+  --green-bdr:   rgba(13,150,96,0.22);
+  --red:         #C0392B;
+  --red-bg:      rgba(192,57,43,0.07);
+  --red-bdr:     rgba(192,57,43,0.2);
+}
+
+body.theme-login .l-panel {
+  background: linear-gradient(150deg, #090D1F 0%, #141B3F 38%, #1F2B6B 68%, #3B4FD6 100%);
+}
+body.theme-login .l-panel::after {
+  background:
+    radial-gradient(ellipse 52% 40% at 92% 6%, rgba(140,160,255,0.13) 0%, transparent 65%),
+    radial-gradient(ellipse 30% 50% at 6% 94%, rgba(255,255,255,0.04) 0%, transparent 55%);
+}
+body.theme-login .l-btn                { background: #3B4FD6; color: #fff; }
+body.theme-login .l-btn:hover          { background: #1A2480; }
+body.theme-login .l-input:focus        { border-color: #3B4FD6; box-shadow: 0 0 0 3px rgba(59,79,214,0.10); }
+body.theme-login .l-hint span          { color: #3B4FD6; }
+body.theme-login #go-register          { color: #3B4FD6; }
+body.theme-login .btn-premium-outline  { border-color: #3B4FD6; color: #3B4FD6; }
+
+/* ── RESPONSIVE PROFILE PAGE ── */
+.profile-view {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.profile-aside {
+  width: 280px;
+  background: var(--surface2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.profile-aside-inner {
+  padding: 32px 24px;
+}
+
+.profile-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-main {
+  flex: 1;
+  padding: 40px;
+  max-width: 900px;
+}
+
+@media (max-width: 992px) {
+  .profile-view {
+    flex-direction: column;
+  }
+  .profile-aside {
+    width: 100%;
+    height: auto;
+    position: sticky;
+    top: 0;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  .profile-aside-inner {
+    padding: 12px 16px;
+  }
+  .profile-user-info {
+    display: none !important;
+  }
+  .profile-back-btn {
+    margin-bottom: 12px !important;
+  }
+  .profile-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    gap: 8px;
+    scrollbar-width: none;
+  }
+  .profile-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .profile-nav-btn {
+    width: auto !important;
+    white-space: nowrap;
+    padding: 8px 14px !important;
+    font-size: 13px !important;
+  }
+  .profile-main {
+    padding: 24px 16px;
+    max-width: 100%;
+  }
+}

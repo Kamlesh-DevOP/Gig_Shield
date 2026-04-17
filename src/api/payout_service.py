@@ -335,6 +335,7 @@ async def process_claim_payout(
                 "mode": mode,
                 "status": "demo_success" if demo else payout_status,
                 "utr": payout_utr,
+                "reason": reason,
             }).execute()
         except Exception as e:
             logger.warning("Failed to log payout transaction: %s", e)

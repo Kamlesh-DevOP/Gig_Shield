@@ -49,7 +49,7 @@ The logical core is built upon a **Multi-Agent Orchestrator using the LangGraph 
 
 ## 5. Model Context Protocol (MCP) & Data Integration
 Gig Insurance Company completely automates physical-world data ingestion entirely through the **Model Context Protocol (MCP)**, connecting the internal neural architecture to live real-world inputs.
-- **Regional Meteo Layers:** Extracts live data regarding severe heatwaves, local rain accumulations, and cyclonic alert volumes.
+- **Regional Meteorological Layers:** Extracts live data regarding severe heatwaves, local rain accumulations, and cyclonic alert volumes.
 - **Telecom Outages:** Checks systemic telecommunication failure metrics to validate 'internet blackout' disruption vectors.
 - **Civil Feeds via News APIs:** Monitors external news endpoints scaling potential riot situations or civil curfews.
 - **Platform Analytics Proxies:** Interfaces with partner b2b platforms seamlessly. Allows the agent pipeline to evaluate backend API server downtimes or systemic food hub failures.
@@ -89,4 +89,9 @@ Here is an elaborated flow of exactly what operates on the Python Fast API clust
     - The **Risk Agent** pulls XGBoost models verifying standard delivery risk.
     - The **Rules Agent** calculates the specific worker's 8-week history block checking for late penalties.
 6. **Deterministic Mathematics Segment:** Time-series Math algorithms calculate Worker Z’s usual income (₹8000). His actual logs reflect (₹4500), breaching the 75% limit gap (₹6000 threshold point). The `PayoutOptimizationModel` computes his Slab 2 coverages modified by historical consistency data, finalizing a net ₹1200 delta.
-7. **Synthesis & Rollout:** The `Decision Agent` pulls the Layer 4 strings, matching it alongside the deterministic math outputs, finalizing a completely structured JSON JSON `{decision: APPROVE, confidence: 91%, reason: parameters satisfied}`. The API subsequently triggers the disbursement. The `SQLAgent` securely logs every node inference instantly onto Supabase.
+7. **Synthesis & Rollout:** The `Decision Agent` pulls the Layer 4 strings, matching it alongside the deterministic math outputs, finalizing a completely structured JSON 
+```JSON 
+{decision: APPROVE, confidence: 91%, reason: parameters satisfied}
+```
+
+The API subsequently triggers the disbursement. The `SQLAgent` securely logs every node inference instantly onto Supabase.

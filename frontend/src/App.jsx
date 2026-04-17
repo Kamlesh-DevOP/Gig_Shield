@@ -975,9 +975,9 @@ function PlanSelector({ partnerId, onPaymentSuccess }) {
   const onPay = (selectedPlanKey) => {
     const planPricing = computePricing(partner, selectedPlanKey);
     const premiumAmount = planPricing.nextPremium;
-    const rzpKey = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_demo_key";
+    const rzpKey = import.meta.env.VITE_RAZORPAY_TEST_KEY_ID || "rzp_test_demo_key";
 
-    if (!import.meta.env.VITE_RAZORPAY_KEY_ID) {
+    if (!import.meta.env.VITE_RAZORPAY_TEST_KEY_ID) {
       if (confirm(`[DEMO MODE] No Razorpay Key found.\n\nSimulate payment of ₹${premiumAmount} for ${selectedPlanKey} plan?`)) {
         onPaymentSuccess(); // Signal payment success
         navigate(`/success/${selectedPlanKey}`);
@@ -1789,10 +1789,9 @@ function ClaimDetailView({ partnerId, evaluation, evalLoading, paidForNextWeek, 
           <div className="timeline-squares-container">
             <div className="squares-grid">
               {Array.from({ length: 52 }).map((_, i) => {
-                const isRecent = i < 10;
-                const status = isRecent 
-                  ? (partner.pastWeeklyPaid[i] ? (partner.pastWeeklyClaimed[i] ? "claimed" : "paid") : "defaulted")
-                  : (Math.random() > 0.05 ? "paid" : "defaulted");
+                const status = i < 42 
+                  ? "paid" 
+                  : (i === 42 ? "defaulted" : (Math.random() > 0.1 ? "paid" : "defaulted"));
                 
                 let sqClass = "square-paid";
                 if (status === "claimed") sqClass = "square-claim";
@@ -1811,13 +1810,23 @@ function ClaimDetailView({ partnerId, evaluation, evalLoading, paidForNextWeek, 
             </div>
           </div>
           <div className="history-footer">
-            <div style={{ display: "flex", gap: 10, alignItems: "center", fontSize: 11, color: "var(--muted)" }}>
-              <span>Less</span>
-              <div className="timeline-square square-paid" />
-              <div className="timeline-square square-verified" />
-              <div className="timeline-square square-high" />
-              <div className="timeline-square square-ultra" />
-              <span>More Contributions</span>
+            <div style={{ display: "flex", gap: 15, alignItems: "center", fontSize: 11, color: "var(--muted)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <div className="timeline-square square-default" />
+                <span>Default</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <div className="timeline-square square-verified" />
+                <span>Slab 1</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <div className="timeline-square square-high" />
+                <span>Slab 2</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <div className="timeline-square square-ultra" />
+                <span>Slab 3</span>
+              </div>
             </div>
             <span>Loyalty Tier: <strong style={{ color: "var(--green)" }}>Diamond Partner</strong></span>
           </div>
@@ -1929,8 +1938,14 @@ function AppContent() {
 
   // Dynamic Platform Theming
   useEffect(() => {
-    // Clear previous themes
-    document.body.classList.remove('theme-instamart', 'theme-blinkit', 'theme-zepto');
+    // Clear all theme classes
+    document.body.classList.remove('theme-instamart', 'theme-blinkit', 'theme-zepto', 'theme-login');
+
+    // Login page always uses a neutral fintech theme — never platform-specific
+    if (location.pathname === '/' || location.pathname === '/register') {
+      document.body.classList.add('theme-login');
+      return;
+    }
 
     // Do not apply themes on the B2B partner portal
     if (location.pathname === '/b2b') {
@@ -1947,8 +1962,8 @@ function AppContent() {
         document.body.classList.add('theme-zepto');
       }
     } else {
-      // Default to zepto if logged out (e.g., login screen)
-      document.body.classList.add('theme-zepto');
+      // Fallback for any other unauthenticated route
+      document.body.classList.add('theme-login');
     }
   }, [partnerId, location.pathname]);
 
