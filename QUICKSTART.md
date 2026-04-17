@@ -91,9 +91,13 @@ PINECONE_INDEX_NAME="your_index_name"
 # ─── Embeddings ───
 HF_TOKEN="your_huggingface_token_here"
 
-# ─── Supabase Backend Persistence (optional) ───
-# SUPABASE_URL="your_supabase_url"
-# SUPABASE_SERVICE_ROLE_KEY="your_service_role_key"
+# ─── Supabase Backend Persistence (Required for /api/forecast/analyze) ───
+SUPABASE_URL="your_supabase_url"
+SUPABASE_SERVICE_ROLE_KEY="your_service_role_key"
+
+# ─── Razorpay ───
+RAZORPAY_TEST_KEY_ID="rzp_test_..."
+RAZORPAY_TEST_KEY_SECRET="..."
 
 # ─── MCP Mock Layer ───
 # GIC_USE_MOCK_MCP="true"           # default: true
@@ -118,6 +122,30 @@ VITE_SUPABASE_ANON_KEY="your_supabase_anon_key"
 ```
 
 > **Get Supabase keys from:** https://supabase.com → Project → Settings → API
+
+### 6. Admin Dashboard — Environment Variables
+
+Create a `.env` file inside the `admin_side/` folder (`admin_side/.env`):
+
+```env
+VITE_SUPABASE_URL="your_supabase_project_url"
+VITE_SUPABASE_ANON_KEY="your_supabase_anon_key"
+VITE_AI_BACKEND_URL="http://localhost:8000"
+
+# MCP Real-Time Data Layer (Optional for live tracking)
+MCP_SERVER_URL=http://localhost:5100
+OPENWEATHERMAP_API_KEY="your_open_weather_key"
+NEWS_API_KEY="your_news_api_key"
+TAVILY_API_KEY="your_tavily_api_key"
+```
+
+### 7. Start Admin Dashboard
+
+```bash
+# From the admin_side folder: GIG_INSURANCE_COMPANY/admin_side/
+npm install
+npm run dev
+```
 
 ---
 
@@ -166,9 +194,9 @@ The frontend runs at: **http://localhost:5173**
 
 ```bash
 # From the admin_side folder: GIG_INSURANCE_COMPANY/admin_side/
-cd admin_side
 npm run dev
 ```
+The dashboard runs at: **http://localhost:5173** (or the next available port)
 
 ---
 
@@ -186,7 +214,7 @@ This is the core demo — simulating a rainfall event and watching the ML pipeli
 
 ### Steps:
 
-1. **Login** with `Z001` / `demo`
+1. **Login** with `workerid: 1` / `password: password`
 2. **Scroll down** on the Dashboard and click **"Run Simulation"**
 3. **Select scenario:**
    - 🌧️ **Heavy Rainfall / Flood** — simulates 150-250mm rain, income drops to 45%
@@ -203,9 +231,9 @@ MCP Layer → Weather API → ML Inference → Agent Analysis → Eligibility Ch
 | Field | Value |
 |-------|-------|
 | Decision | ✅ APPROVE |
-| Payout | ~₹1,818 |
+| Payout | ~₹2,014 |
 | Confidence | ~88% |
-| Coverable Gap | ₹2,250 (30% income loss) |
+| Coverable with bonus | ₹3,358 |
 
 ---
 
@@ -230,7 +258,7 @@ MCP Layer → Weather API → ML Inference → Agent Analysis → Eligibility Ch
 │                     MULTI-AGENT ORCHESTRATION                       │
 │                                                                     │
 │   ┌─────────────┐    ┌────────────────┐    ┌───────────────┐        │
-│   │  Monitor    │───▶│  Validation    │───▶│   Context     │        │
+│   │  Monitor    │───▶│  Validation    │───▶│   Context    │        │
 │   │  Agent      │    │  Agent         │    │   Agent (RAG) │        │
 │   └─────────────┘    └────────────────┘    └───────┬───────┘        │
 │                                                    │                │
@@ -262,8 +290,8 @@ MCP Layer → Weather API → ML Inference → Agent Analysis → Eligibility Ch
                │
                ▼
 ┌──────────────────────────────────────────────────────────────────────┐
-│    6 ML Models (Parallel)  ·  RAG Vector Store  ·  Knowledge Base   │
-│    Income · Risk · Fraud · Disruption · Behavior · Premium          │
+│    6 ML Models (Parallel)  ·  RAG Vector Store  ·  Knowledge Base    │
+│    Income · Risk · Fraud · Disruption · Behavior · Premium           │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
