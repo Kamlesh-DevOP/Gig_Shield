@@ -611,7 +611,82 @@ const Dashboard = () => {
         {/* ── Real-time Analytics Dashboard (Only shown when results are ready) ── */}
         {!mcpScanRunning && !simRunning && (
           <>
-            <div className="predictive-grid animate-fade-in" style={{ marginTop: '1.5rem' }}>
+            {/* ── Real-time Disruption News (New Feature) ── */}
+            {isMcpActive && !isMcpFallback && !isSimActive && mcpScanResult.disruptions_detected > 0 && (
+              <div className="disruption-news-grid animate-fade-in" style={{ gridColumn: '1 / -1', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1rem' }}>
+                {mcpScanResult.city_results.filter(c => c.overall_risk_level !== 'LOW').map((c, idx) => (
+                  <div key={idx} className="disruption-news-card" style={{
+                    background: 'linear-gradient(135deg, #FFF5F1 0%, #FFFFFF 100%)',
+                    border: '1px solid #FFEDD5',
+                    borderRadius: '16px',
+                    padding: '1.25rem',
+                    boxShadow: '0 4px 12px rgba(251, 146, 60, 0.08)',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '40px', height: '40px', background: '#FFEDD5', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <MapPin size={20} style={{ color: '#F97316' }} />
+                        </div>
+                        <div>
+                          <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#1F2937' }}>{c.city}</h4>
+                          <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                            {c.disruption_flags?.map(f => (
+                              <span key={f} style={{ fontSize: '0.65rem', fontWeight: 600, color: '#F97316', background: 'rgba(249, 115, 22, 0.1)', padding: '2px 8px', borderRadius: '99px', textTransform: 'capitalize' }}>#{f}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <span style={{ 
+                        padding: '4px 12px', 
+                        borderRadius: '99px', 
+                        fontSize: '0.75rem', 
+                        fontWeight: 800, 
+                        background: RISK_LEVEL_CONFIG[c.overall_risk_level]?.color || '#F97316', 
+                        color: '#fff',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      }}>
+                        {c.overall_risk_level}
+                      </span>
+                    </div>
+
+                    <p style={{ fontSize: '0.9rem', color: '#4B5563', lineHeight: '1.6', marginBottom: '1.25rem', fontStyle: 'italic' }}>
+                      {c.tavily_answer ? (
+                        `"${c.tavily_answer}"`
+                      ) : c.news_headlines && c.news_headlines.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--text-dark)', fontStyle: 'normal' }}>Live News Feed:</span>
+                          {c.news_headlines.slice(0, 2).map((h, i) => (
+                            <span key={i} style={{ display: 'block', paddingLeft: '8px', borderLeft: '2px solid #FFEDD5' }}>• {h}</span>
+                          ))}
+                        </div>
+                      ) : c.hazard_context && c.hazard_context !== 'No specific hazards detected.' ? (
+                        `"${c.hazard_context}"`
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--muted-dark)', fontStyle: 'normal' }}>
+                          <CloudLightning size={14} />
+                          <span>Detected unusual {c.weather_condition || "conditions"} in {c.city}. Monitoring live status...</span>
+                        </div>
+                      )}
+                    </p>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid #FFEDD5' }}>
+                      <div>
+                        <span style={{ fontSize: '0.7rem', color: '#9CA3AF', textTransform: 'uppercase', fontWeight: 600 }}>Workers Scanned</span>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1F2937' }}>{c.workers_found}</div>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '0.7rem', color: '#9CA3AF', textTransform: 'uppercase', fontWeight: 600 }}>Payout (Real)</span>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#F97316' }}>{formatCurrency(c.total_payout)}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="predictive-grid animate-fade-in" style={{ marginTop: '0rem' }}>
               {/* Workers Affected (Real-time) */}
               <div className={`pred-card ${isSimActive ? 'pred-card-sim' : isMcpActive && !isMcpFallback ? 'pred-card-live' : ''}`}>
                 <span className="pred-label">
@@ -662,6 +737,17 @@ const Dashboard = () => {
                     : isMcpActive && !isMcpFallback
                       ? 'Computed agent decisions for live disruptions'
                       : 'Awaiting event trigger...'}
+                  
+                  {(isSimActive || (isMcpActive && !isMcpFallback)) && (
+                    <div style={{ marginTop: '10px', padding: '8px', background: 'rgba(107, 45, 139, 0.05)', borderRadius: '8px', border: '1px solid rgba(107, 45, 139, 0.1)', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                         <span style={{ fontSize: '0.7rem', color: 'var(--muted-dark)', fontWeight: 600 }}>Eligible for Payout:</span>
+                         <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent)' }}>
+                           {isSimActive ? simResult.workers_eligible_for_payout : mcpScanResult.total_workers_eligible}
+                         </span>
+                       </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -732,7 +818,7 @@ const Dashboard = () => {
                             </td>
                             <td style={{ padding: '0.75rem 0.5rem', verticalAlign: 'top' }}>
                               <span style={{ color: 'var(--muted-dark)' }}>Avg:</span> {formatCurrency(w.avg_52week_income || 0)} <br />
-                              <span style={{ color: 'var(--muted-dark)' }}>Pred:</span> <span style={{ color: 'var(--text-dark)' }}>{formatCurrency(w.weekly_income_predicted || 0)}</span>
+                              <span style={{ color: 'var(--muted-dark)' }}>Pred:</span> <span style={{ color: 'var(--text-dark)' }}>{formatCurrency(w.ml_predictions?.income_forecast?.ensemble || w.ml_predictions?.income_forecast || 0)}</span>
                             </td>
                             <td style={{ padding: '0.75rem 0.5rem', verticalAlign: 'top' }}>
                               <span style={{
