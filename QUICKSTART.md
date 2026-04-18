@@ -14,7 +14,7 @@
 | **Git** | Any | `git --version` |
 
 ### 🔑 Required API Keys & Generation Steps
-
+- kindly contact [itsmesrinithi@gmail.com](itmesrinithi@gmail.com) to get env variables to run locally
 You can find `.env.example` files in both the project root and the `frontend/` directories. Here is how to generate the required variables:
 
 **1. Database & Authentication (Supabase)**
