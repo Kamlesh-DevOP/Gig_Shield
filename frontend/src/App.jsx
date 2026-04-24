@@ -44,6 +44,7 @@ const PARTNERS = {
     phone: "+91 98401 12345", bankId: "HDFC000198401",
     deliveries: 312, rating: 4.7,
     chosenPlan: "premium",
+    autopayEnabled: true,
     isNewCustomer: true,
     pastWeeklyEarnings: [8200, 7900, 8400, 7600, 8300, 7900, 8100, 8200, 7700, 7700],
     pastWeeklyPaid: [null, null, null, null, null, null, null, null, null, null],
@@ -64,6 +65,7 @@ const PARTNERS = {
     phone: "+91 94440 67890", bankId: "SBI009944401",
     deliveries: 2876, rating: 4.5,
     chosenPlan: "premium",
+    autopayEnabled: true,
     pastWeeklyEarnings: [8200, 9800, 8200, 5600, 8200, 8200, 9800, 8200, 5600, 8200],
     // exactly 6 defaults out of 10 weeks
     pastWeeklyPaid: [false, true, false, true, false, false, true, false, true, false],
@@ -84,6 +86,7 @@ const PARTNERS = {
     phone: "+91 90000 34567", bankId: "ICICI0078234",
     deliveries: 1956, rating: 4.9,
     chosenPlan: "premium",
+    autopayEnabled: true,
     pastWeeklyEarnings: [8300, 8100, 8400, 8200, 8300, 8400, 8200, 5500, 8300, 8300],
     pastWeeklyPaid: [true, true, true, true, true, true, true, true, true, true],
     pastWeeklyClaimed: [false, false, false, false, false, false, false, true, false, false],
@@ -418,6 +421,7 @@ function LoginPage({ onLogin }) {
       deliveries: dbRecord.orders_completed_week || 0,
       rating: parseFloat((dbRecord.fraud_trust_rating * 5).toFixed(1)) || 4.5,
       chosenPlan: chosenPlan,
+      autopayEnabled: true,
       isNewCustomer: false,
       // Metrics for calculations
       dbRecord: dbRecord,
@@ -963,6 +967,18 @@ function Dashboard({ partnerId, evaluation, evalLoading, onLogout, paidForNextWe
   );
 }
 
+const recordPayment = async (partnerId, amount, planKey) => {
+  try {
+    await supabase.from('premium_payments').insert([{
+      worker_id: partnerId,
+      amount: amount,
+      plan_tier: planKey
+    }]);
+  } catch (err) {
+    console.error("Failed to record payment:", err);
+  }
+};
+
 // ─── PLAN SELECTOR ────────────────────────────────────────────────────────────
 function PlanSelector({ partnerId, onPaymentSuccess }) {
   const navigate = useNavigate();
@@ -970,9 +986,21 @@ function PlanSelector({ partnerId, onPaymentSuccess }) {
   if (!partner) return null;
   const [selected, setSelected] = useState(partner.chosenPlan);
   const pricing = useMemo(() => computePricing(partner, selected), [partner, selected]);
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [pendingPlan, setPendingPlan] = useState(null);
 
   const onBack = () => navigate("/dashboard");
   
+  const handlePayClick = (e, planKey) => {
+    e.stopPropagation();
+    if (partner.autopayEnabled === false) {
+      setPendingPlan(planKey);
+      setShowPrompt(true);
+    } else {
+      onPay(planKey);
+    }
+  };
+
   const onPay = (selectedPlanKey) => {
     const planPricing = computePricing(partner, selectedPlanKey);
     const premiumAmount = planPricing.nextPremium;
@@ -980,8 +1008,10 @@ function PlanSelector({ partnerId, onPaymentSuccess }) {
 
     if (!import.meta.env.VITE_RAZORPAY_TEST_KEY_ID) {
       if (confirm(`[DEMO MODE] No Razorpay Key found.\n\nSimulate payment of ₹${premiumAmount} for ${selectedPlanKey} plan?`)) {
-        onPaymentSuccess(); // Signal payment success
-        navigate(`/success/${selectedPlanKey}`);
+        recordPayment(partnerId, premiumAmount, selectedPlanKey).then(() => {
+          onPaymentSuccess(); // Signal payment success
+          navigate(`/success/${selectedPlanKey}`);
+        });
       }
       return;
     }
@@ -990,11 +1020,13 @@ function PlanSelector({ partnerId, onPaymentSuccess }) {
       key: rzpKey,
       amount: premiumAmount * 100,
       currency: "INR",
-      name: "Gig Shield",
+      name: "Gig Insurance Company",
       description: `${selectedPlanKey.toUpperCase()} Plan Premium`,
       handler: function (response) {
-        onPaymentSuccess(); // Signal payment success
-        navigate(`/success/${selectedPlanKey}`);
+        recordPayment(partnerId, premiumAmount, selectedPlanKey).then(() => {
+          onPaymentSuccess(); // Signal payment success
+          navigate(`/success/${selectedPlanKey}`);
+        });
       },
       prefill: {
         name: partner.name,
@@ -1162,7 +1194,7 @@ function PlanSelector({ partnerId, onPaymentSuccess }) {
 
                 <button 
                   className="plan-btn"
-                  onClick={(e) => { e.stopPropagation(); onPay(key); }}
+                  onClick={(e) => handlePayClick(e, key)}
                   style={{ 
                     background: isSelected ? tierInfo.accent : "var(--surface)", 
                     color: isSelected ? "#fff" : "var(--purple)", 
@@ -1179,6 +1211,48 @@ function PlanSelector({ partnerId, onPaymentSuccess }) {
           })}
         </div>
       </div>
+
+      {showPrompt && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: "20px", padding: "32px", maxWidth: "400px", width: "90%",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.2)", textAlign: "center"
+          }}>
+            <div style={{ width: "56px", height: "56px", background: "var(--purple-pale)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "var(--purple)" }}>
+              <Zap size={28} />
+            </div>
+            <h3 style={{ fontSize: "20px", fontWeight: 700, color: "var(--purple-dark)", marginBottom: "12px" }}>Enable Auto Pay?</h3>
+            <p style={{ fontSize: "14px", color: "var(--muted)", marginBottom: "24px", lineHeight: "1.6" }}>
+              Never miss a payment and keep your income protection active seamlessly. Auto Pay automatically deducts your weekly premium.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <button 
+                onClick={() => { 
+                  partner.autopayEnabled = true; 
+                  setShowPrompt(false); 
+                  if (pendingPlan) onPay(pendingPlan); 
+                }}
+                style={{ background: "var(--purple)", color: "#fff", border: "none", padding: "14px", borderRadius: "12px", fontSize: "15px", fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}
+              >
+                Yes, Enable Auto Pay & Pay
+              </button>
+              <button 
+                onClick={() => { 
+                  setShowPrompt(false); 
+                  if (pendingPlan) onPay(pendingPlan); 
+                }}
+                style={{ background: "transparent", color: "var(--muted)", border: "none", padding: "14px", borderRadius: "12px", fontSize: "15px", fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}
+              >
+                No, just pay once
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1194,6 +1268,7 @@ function PaymentPage({ partnerId }) {
   const premium = pricing.nextPremium;
   const [method, setMethod] = useState("UPI");
   const [loading, setLoading] = useState(false);
+  const [showPrompt, setShowPrompt] = useState(false);
 
   const onBack = () => navigate("/plans");
   const onSuccess = () => navigate(`/success/${planKey}`);
@@ -1239,6 +1314,7 @@ function PaymentPage({ partnerId }) {
             });
             const verifyData = await verifyRes.json();
             if (verifyData.status === "success") {
+              await recordPayment(partnerId, premium, planKey);
               onSuccess();
             } else {
               alert("Payment verification failed. Please contact support.");
@@ -1299,13 +1375,54 @@ function PaymentPage({ partnerId }) {
         </div>
         <button
           className="btn-accent"
-          onClick={handlePayment}
+          onClick={() => {
+            if (partner.autopayEnabled === false) {
+              setShowPrompt(true);
+            } else {
+              handlePayment();
+            }
+          }}
           disabled={loading}
         >
           {loading ? <span className="spin"><Radio size={16} /></span> : <><Lock size={15} /> Pay {fmt(premium)}</>}
         </button>
         <div className="secure-note"><Lock size={11} /> Secured by Razorpay · Auto-trigger enabled</div>
       </div>
+
+      {showPrompt && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: "20px", padding: "32px", maxWidth: "400px", width: "90%",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.2)", textAlign: "center"
+          }}>
+            <div style={{ width: "56px", height: "56px", background: "var(--purple-pale)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "var(--purple)" }}>
+              <Zap size={28} />
+            </div>
+            <h3 style={{ fontSize: "20px", fontWeight: 700, color: "var(--purple-dark)", marginBottom: "12px" }}>Enable Auto Pay?</h3>
+            <p style={{ fontSize: "14px", color: "var(--muted)", marginBottom: "24px", lineHeight: "1.6" }}>
+              Never miss a payment and keep your income protection active seamlessly. Auto Pay automatically deducts your weekly premium.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <button 
+                onClick={() => { partner.autopayEnabled = true; setShowPrompt(false); handlePayment(); }}
+                style={{ background: "var(--purple)", color: "#fff", border: "none", padding: "14px", borderRadius: "12px", fontSize: "15px", fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}
+              >
+                Yes, Enable Auto Pay & Pay
+              </button>
+              <button 
+                onClick={() => { setShowPrompt(false); handlePayment(); }}
+                style={{ background: "transparent", color: "var(--muted)", border: "none", padding: "14px", borderRadius: "12px", fontSize: "15px", fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }}
+              >
+                No, just pay once
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1771,69 +1888,7 @@ function ClaimDetailView({ partnerId, evaluation, evalLoading, paidForNextWeek, 
           </div>
         </div>
 
-        {/* 3. Rewards & Penalties Timeline (52-Week Square View) */}
-        <div className="section-card">
-          <div className="loyalty-header">
-            <div>
-              <div className="section-title">52-Week Loyalty Timeline</div>
-              <div className="section-sub">Square-based contribution graph & automated claims history</div>
-            </div>
-            <div className="streak-box">
-              <Zap size={18} fill="#EA580C" color="#EA580C" />
-              <div>
-                <div className="streak-num">42 Weeks</div>
-                <div className="streak-label">Active Streak</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="timeline-squares-container">
-            <div className="squares-grid">
-              {Array.from({ length: 52 }).map((_, i) => {
-                const status = i < 42 
-                  ? "paid" 
-                  : (i === 42 ? "defaulted" : (Math.random() > 0.1 ? "paid" : "defaulted"));
-                
-                let sqClass = "square-paid";
-                if (status === "claimed") sqClass = "square-claim";
-                else if (status === "defaulted") sqClass = "square-default";
-                else {
-                  // Simulate different green intensities based on i
-                  if (i % 7 === 0) sqClass = "square-ultra";
-                  else if (i % 3 === 0) sqClass = "square-high";
-                  else sqClass = "square-verified";
-                }
-                
-                return (
-                  <div key={i} className={`timeline-square ${sqClass}`} title={`Week ${52-i}: ${status}`} />
-                );
-              })}
-            </div>
-          </div>
-          <div className="history-footer">
-            <div style={{ display: "flex", gap: 15, alignItems: "center", fontSize: 11, color: "var(--muted)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <div className="timeline-square square-default" />
-                <span>Default</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <div className="timeline-square square-verified" />
-                <span>Slab 1</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <div className="timeline-square square-high" />
-                <span>Slab 2</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <div className="timeline-square square-ultra" />
-                <span>Slab 3</span>
-              </div>
-            </div>
-            <span>Loyalty Tier: <strong style={{ color: "var(--green)" }}>Diamond Partner</strong></span>
-          </div>
-        </div>
-
-        {/* 4. Next Week CTA */}
+        {/* 3. Next Week CTA */}
         <div className="next-week-bar" style={{ marginTop: 20 }}>
           <div>
             <div className="nw-label">Next Week Premium Due · 16–22 Jun 2025</div>

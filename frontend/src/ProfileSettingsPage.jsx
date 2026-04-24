@@ -13,15 +13,88 @@ const fmt = (n) => `₹${Number(n).toLocaleString("en-IN")}`;
 export default function ProfileSettingsPage({ partner, onBack, onLogout }) {
   const [activeTab, setActiveTab] = useState("profile"); // 'profile', 'payout', 'plan', 'security'
   const [loading, setLoading] = useState(false);
+  const [autopayState, setAutopayState] = useState(partner.autopayEnabled !== false);
   const [saved, setSaved] = useState(false);
   const [payouts, setPayouts] = useState([]);
   const [payoutsLoading, setPayoutsLoading] = useState(false);
+  const [lastPaymentDate, setLastPaymentDate] = useState(null);
+  const [lastPaymentAmount, setLastPaymentAmount] = useState(null);
+  const [renewalLoading, setRenewalLoading] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState([]);
+  const [workerCreatedDate, setWorkerCreatedDate] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     if (activeTab === "payout" && partner.id.startsWith("DB")) {
       fetchPayoutHistory();
     }
+    if (activeTab === "plan") {
+      fetchPlanData();
+    }
   }, [activeTab, partner.id]);
+
+  const fetchPlanData = async () => {
+    setHistoryLoading(true);
+    setRenewalLoading(true);
+    try {
+      const { data: payData } = await supabase
+        .from('premium_payments')
+        .select('*')
+        .eq('worker_id', partner.id)
+        .order('payment_date', { ascending: false });
+      
+      if (payData && payData.length > 0) {
+        setPaymentHistory(payData);
+        setLastPaymentDate(new Date(payData[0].payment_date));
+        setLastPaymentAmount(payData[0].amount);
+      } else {
+        setPaymentHistory([]);
+        setLastPaymentDate(null);
+        setLastPaymentAmount(null);
+      }
+
+      if (partner.id.startsWith("DB")) {
+        const workerId = partner.id.replace("DB", "");
+        const { data: wData } = await supabase
+          .from('workers')
+          .select('created_at')
+          .eq('worker_id', workerId)
+          .maybeSingle();
+        if (wData) {
+          const validDate = wData.created_at;
+          if (validDate) {
+            setWorkerCreatedDate(new Date(validDate));
+          }
+        }
+      } else {
+         const d = new Date();
+         d.setDate(d.getDate() - 70); // Mock: 10 weeks ago
+         setWorkerCreatedDate(d);
+      }
+    } catch (err) {
+      console.error("Error fetching plan data:", err);
+    } finally {
+      setHistoryLoading(false);
+      setRenewalLoading(false);
+    }
+  };
+
+  const formatNextRenewal = () => {
+    if (renewalLoading) return "Loading...";
+    if (!lastPaymentDate) return "22 Jun '25";
+    const nextDate = new Date(lastPaymentDate);
+    nextDate.setDate(nextDate.getDate() + 7);
+    const day = nextDate.getDate();
+    const month = nextDate.toLocaleString("en-US", { month: "short" });
+    const year = nextDate.getFullYear().toString().slice(-2);
+    return `${day} ${month} '${year}`;
+  };
+
+  const formatLastAmount = () => {
+    if (renewalLoading) return "...";
+    if (lastPaymentAmount) return fmt(lastPaymentAmount);
+    return "₹320";
+  };
 
   const fetchPayoutHistory = async () => {
     setPayoutsLoading(true);
@@ -267,6 +340,52 @@ export default function ProfileSettingsPage({ partner, onBack, onLogout }) {
               </div>
             </div>
 
+            {/* Auto Pay Setting */}
+            <div style={{
+              background: "var(--surface)",
+              borderRadius: "20px",
+              padding: "28px",
+              marginBottom: "32px",
+              border: "1px solid var(--border)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center"
+            }}>
+              <div>
+                <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--purple-dark)", marginBottom: "4px" }}>Auto Pay for Weekly Premiums</h3>
+                <p style={{ fontSize: "13px", color: "var(--muted)", margin: 0, maxWidth: "400px" }}>Automatically deduct premium amount every week to keep your policy active seamlessly.</p>
+              </div>
+              <div 
+                onClick={() => {
+                  const newVal = !(partner.autopayEnabled !== false);
+                  partner.autopayEnabled = newVal;
+                  setAutopayState(newVal);
+                }}
+                style={{
+                  width: "44px",
+                  height: "24px",
+                  background: (partner.autopayEnabled !== false) ? "var(--green)" : "var(--muted)",
+                  borderRadius: "12px",
+                  position: "relative",
+                  cursor: "pointer",
+                  transition: "background 0.3s",
+                  flexShrink: 0
+                }}
+              >
+                <div style={{
+                  width: "20px",
+                  height: "20px",
+                  background: "white",
+                  borderRadius: "50%",
+                  position: "absolute",
+                  top: "2px",
+                  left: (partner.autopayEnabled !== false) ? "22px" : "2px",
+                  transition: "left 0.3s",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+                }} />
+              </div>
+            </div>
+
             <button
               onClick={handleSave}
               disabled={loading}
@@ -477,7 +596,7 @@ export default function ProfileSettingsPage({ partner, onBack, onLogout }) {
                 border: "1px solid var(--border)"
               }}>
                 <div style={{ fontSize: "11px", color: "var(--muted)", marginBottom: "4px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Weekly Premium</div>
-                <div style={{ fontSize: "22px", fontWeight: 600, color: "var(--purple-dark)", fontFamily: "'Poppins', monospace" }}>₹320</div>
+                <div style={{ fontSize: "22px", fontWeight: 600, color: "var(--purple-dark)", fontFamily: "'Poppins', monospace" }}>{formatLastAmount()}</div>
               </div>
               <div style={{
                 background: "var(--surface)",
@@ -486,7 +605,136 @@ export default function ProfileSettingsPage({ partner, onBack, onLogout }) {
                 border: "1px solid var(--border)"
               }}>
                 <div style={{ fontSize: "11px", color: "var(--muted)", marginBottom: "4px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Next Renewal</div>
-                <div style={{ fontSize: "22px", fontWeight: 600, color: "var(--purple-dark)", fontFamily: "'Poppins', monospace" }}>22 Jun '25</div>
+                <div style={{ fontSize: "22px", fontWeight: 600, color: "var(--purple-dark)", fontFamily: "'Poppins', monospace" }}>{formatNextRenewal()}</div>
+              </div>
+            </div>
+
+            {/* Timeline */}
+            <div style={{
+              background: "var(--surface)",
+              borderRadius: "20px",
+              padding: "28px",
+              marginBottom: "32px",
+              marginTop: "32px",
+              border: "1px solid var(--border)"
+            }}>
+              <div className="loyalty-header" style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
+                <div>
+                  <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--purple-dark)", marginBottom: "4px" }}>Loyalty Timeline</h3>
+                  <p style={{ fontSize: "13px", color: "var(--muted)", margin: 0 }}>Contribution graph based on account creation</p>
+                </div>
+              </div>
+              <div className="timeline-squares-container" style={{ marginTop: "16px" }}>
+                <div className="squares-grid">
+                  {(() => {
+                    if (historyLoading) return <div style={{ fontSize: "13px", color: "var(--muted)" }}>Loading timeline...</div>;
+                    const now = new Date();
+                    const createdDate = workerCreatedDate || now;
+                    const msInWeek = 7 * 24 * 60 * 60 * 1000;
+                    let weeksSinceCreated = Math.ceil((now - createdDate) / msInWeek);
+                    if (weeksSinceCreated < 1) weeksSinceCreated = 1;
+                    const displayWeeks = Math.min(52, weeksSinceCreated);
+
+                    const paymentWeeks = new Set();
+                    paymentHistory.forEach(p => {
+                      const pDate = new Date(p.payment_date);
+                      const weeksAgo = Math.floor((now - pDate) / msInWeek);
+                      if (weeksAgo >= 0 && weeksAgo < 52) paymentWeeks.add(weeksAgo);
+                    });
+
+                    return Array.from({ length: displayWeeks }).map((_, i) => {
+                      const weekIdx = displayWeeks - 1 - i;
+                      const isPaid = paymentWeeks.has(weekIdx);
+                      const status = isPaid ? "paid" : "defaulted";
+                      
+                      let sqClass = "square-paid";
+                      if (status === "defaulted") sqClass = "square-default";
+                      else {
+                        if (weekIdx % 7 === 0) sqClass = "square-ultra";
+                        else if (weekIdx % 3 === 0) sqClass = "square-high";
+                        else sqClass = "square-verified";
+                      }
+                      
+                      return (
+                        <div key={i} className={`timeline-square ${sqClass}`} title={`Week ${displayWeeks-i}: ${status}`} />
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+              <div className="history-footer" style={{ borderTop: "1px solid var(--border)", paddingTop: "12px", marginTop: "14px", display: "flex", flexWrap: "wrap", gap: "24px", fontSize: "12px", color: "var(--muted)" }}>
+                <div style={{ display: "flex", gap: 15, alignItems: "center", fontSize: 11, color: "var(--muted)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <div className="timeline-square square-default" />
+                    <span>Default</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <div className="timeline-square square-verified" />
+                    <span>Slab 1</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <div className="timeline-square square-high" />
+                    <span>Slab 2</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <div className="timeline-square square-ultra" />
+                    <span>Slab 3</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment History List */}
+            <div style={{
+              background: "var(--surface)",
+              borderRadius: "20px",
+              padding: "28px",
+              marginBottom: "32px",
+              border: "1px solid var(--border)",
+              overflow: "hidden"
+            }}>
+              <h3 style={{ fontSize: "16px", fontWeight: 600, color: "var(--purple-dark)", marginBottom: "16px" }}>Past Payments</h3>
+              <div style={{ overflowX: "auto" }}>
+                {historyLoading ? (
+                  <div style={{ fontSize: "13px", color: "var(--muted)", padding: "12px 0" }}>Loading payments...</div>
+                ) : paymentHistory.length === 0 ? (
+                  <div style={{ fontSize: "13px", color: "var(--muted)", padding: "12px 0", fontStyle: "italic" }}>No payments recorded yet.</div>
+                ) : (
+                  <table className="history-table" style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px", textAlign: "left" }}>
+                    <thead>
+                      <tr>
+                        <th style={{ padding: "8px 14px", color: "var(--muted)", fontWeight: 600, fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.8px", borderBottom: "2px solid var(--border)" }}>Date</th>
+                        <th style={{ padding: "8px 14px", color: "var(--muted)", fontWeight: 600, fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.8px", borderBottom: "2px solid var(--border)" }}>Plan</th>
+                        <th style={{ padding: "8px 14px", color: "var(--muted)", fontWeight: 600, fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.8px", borderBottom: "2px solid var(--border)" }}>Amount</th>
+                        <th style={{ padding: "8px 14px", color: "var(--muted)", fontWeight: 600, fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.8px", borderBottom: "2px solid var(--border)" }}>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paymentHistory.map((p, idx) => {
+                        const pDate = new Date(p.payment_date);
+                        return (
+                          <tr key={p.id || idx}>
+                            <td style={{ padding: "9px 14px", borderBottom: "1px solid var(--surface2)" }}>
+                              <div style={{ fontWeight: 600, color: "var(--purple-dark)" }}>{pDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</div>
+                              <div style={{ fontSize: "10px", color: "var(--muted)" }}>{pDate.getFullYear()}</div>
+                            </td>
+                            <td style={{ padding: "9px 14px", borderBottom: "1px solid var(--surface2)" }}>
+                              <div style={{ textTransform: "capitalize", fontWeight: 600 }}>{p.plan_tier} Plan</div>
+                            </td>
+                            <td style={{ padding: "9px 14px", borderBottom: "1px solid var(--surface2)" }}>
+                              <div style={{ fontWeight: 700, fontFamily: "var(--mono)" }}>{fmt(p.amount)}</div>
+                            </td>
+                            <td style={{ padding: "9px 14px", borderBottom: "1px solid var(--surface2)" }}>
+                              <div className="history-badge" style={{ background: "var(--green-bg)", color: "var(--green)", borderColor: "var(--green-bdr)", display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "11px", fontWeight: 600, padding: "3px 10px", borderRadius: "20px", border: "1px solid var(--green-bdr)" }}>
+                                <CheckCircle2 size={12} /> Success
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           </div>

@@ -3028,7 +3028,6 @@ body.theme-login .btn-premium-outline  { border-color: #3B4FD6; color: #3B4FD6; 
 .profile-main {
   flex: 1;
   padding: 40px;
-  max-width: 900px;
 }
 
 @media (max-width: 992px) {
