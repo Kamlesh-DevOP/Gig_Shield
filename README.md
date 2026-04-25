@@ -2,12 +2,14 @@
   <img src="admin_side/src/assets/logo.jpeg" alt="GIC Logo" width="250" />
 
   # 🛡️ Gig Insurance Company (GIC)
-  
-  **An Autonomous Parametric Income Insurance for Gig Workers**
 
+  **An Autonomous Parametric Income Insurance for Gig Workers** 
+  <br>
   [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
   [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com/)
   [![React](https://img.shields.io/badge/React-18.2+-blue.svg)](https://react.dev/)
+  <br>
+  [![Copyright](https://img.shields.io/badge/Copyright-©_2026_All_Rights_Reserved-red.svg)]()
 
 </div>
 
@@ -736,3 +738,9 @@ This approach ensures:
 - Fair claim distribution
 - Scalable autonomous validation
 - Strong trust for partners and workers
+
+## 📄 Copyright & License
+
+© 2026 Team Status Code 401. All Rights Reserved.
+
+This project and its entire contents are the proprietary property of Gig Insurance Company. No part of this repository may be reproduced, distributed, or transmitted in any form or by any means without the prior written permission of the copyright holder.
